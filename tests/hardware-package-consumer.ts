@@ -23,3 +23,8 @@ async function residentConsumer(sim:DigitalSimulator):Promise<ResidentResult>{
  try{const stats:ResidentStats=gpu.stats();void stats;return await gpu.run(8);}finally{gpu.dispose();}
 }
 void residentConsumer;
+
+import {AdaptiveElectricalSimulator,type AdaptiveCircuit,type AdaptiveIntegrationResult} from '@sketchpad-lab/hardware-sim';
+const adaptiveCircuit:AdaptiveCircuit={...circuit,integration:{mode:'adaptive',relativeTolerance:1e-4}};
+const adaptiveResult:AdaptiveIntegrationResult=new AdaptiveElectricalSimulator(adaptiveCircuit).stepAdaptive(.001);
+const substeps:number=adaptiveResult.integration.acceptedSteps;void substeps;

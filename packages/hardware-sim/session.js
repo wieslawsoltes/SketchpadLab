@@ -2,7 +2,7 @@ import {assemble,encodeBinaryTape} from '../tx2-assembler/index.js';
 import {TX2GateBoard} from './tx2-board.js';
 import {DigitalSimulator,Waveform} from './digital.js';
 import {TimedSimulator} from './timed.js';
-import {ElectricalSimulator} from './electrical.js';
+import {AdaptiveElectricalSimulator as ElectricalSimulator} from './adaptive.js';
 import {MixedSignalSimulator} from './mixed.js';
 import {GPUClockedSimulator} from './webgpu.js';
 import {GPUResidentSimulator} from './resident.js';
