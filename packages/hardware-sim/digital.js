@@ -54,6 +54,21 @@ export class DigitalSimulator {
         this.lastRoots = new Uint32Array(this.roots.length).fill(4);
         this.levelOf = new Uint32Array(this.plan.gates.length);
         this.plan.levels.forEach((level, i) => level.forEach(g => this.levelOf[g] = i));
+        // Dense execution-only schedules retain the inspectable structural plan.
+        // CSR fanout avoids chasing hundreds of thousands of nested JS arrays.
+        this.gateWords = new Uint32Array(this.plan.gates.length * 5);
+        for (let i = 0; i < this.plan.gates.length; i++) {
+            const g = this.plan.gates[i], p = i * 5;
+            this.gateWords.set([g.op * 64, g.a, g.b, g.c, g.q], p);
+        }
+        this.flopWords = new Uint32Array(this.plan.flops.length * 5);
+        for (let i = 0; i < this.plan.flops.length; i++) {
+            const f = this.plan.flops[i]; this.flopWords.set([f.q, f.d, f.enable, f.reset, f.initial], i * 5);
+        }
+        this.fanoutOffsets = new Uint32Array(this.plan.names.length + 1);
+        for (let i = 0; i < this.plan.names.length; i++) this.fanoutOffsets[i + 1] = this.fanoutOffsets[i] + this.plan.fanout[i].length;
+        this.fanoutTargets = new Uint32Array(this.fanoutOffsets.at(-1));
+        for (let i = 0; i < this.plan.names.length; i++) this.fanoutTargets.set(this.plan.fanout[i], this.fanoutOffsets[i]);
         this.dirty = new Uint8Array(this.plan.gates.length);
         this.queues = this.plan.levels.map(() => []);
         this.firstDirtyLevel = Infinity; this.lastDirtyLevel = -1;
@@ -73,10 +88,11 @@ export class DigitalSimulator {
     }
     _invalidate() { for (let i = 0; i < this.plan.gates.length; i++) this._mark(i); }
     _evaluate() {
-        const v = this.values;
+        const v = this.values, offsets = this.fanoutOffsets, targets = this.fanoutTargets, gates = this.gateWords;
         for (let i = 0; i < this.roots.length; i++) {
             const pin = this.roots[i];
-            if (v[pin] !== this.lastRoots[i]) { this.lastRoots[i] = v[pin]; for (const g of this.plan.fanout[pin]) this._mark(g); }
+            if (v[pin] !== this.lastRoots[i]) { this.lastRoots[i] = v[pin];
+                for (let j = offsets[pin]; j < offsets[pin + 1]; j++) this._mark(targets[j]); }
         }
         // A fanout gate is always in a later level. Process only gates whose
         // inputs changed; no heap, dynamic code generation, or instruction shortcut.
@@ -84,11 +100,12 @@ export class DigitalSimulator {
         // upper bound: no newly queued gate can precede the current level.
         for (let level = this.firstDirtyLevel; level <= this.lastDirtyLevel; level++) {
             const queue = this.queues[level];
-            for (const index of queue) {
-                this.dirty[index] = 0;
-                const g = this.plan.gates[index], value = TRUTH_TABLE[g.op * 64 + v[g.a] + 4 * v[g.b] + 16 * v[g.c]];
+            for (let i = 0; i < queue.length; i++) {
+                const index = queue[i], p = index * 5, q = gates[p + 4]; this.dirty[index] = 0;
+                const value = TRUTH_TABLE[gates[p] + v[gates[p + 1]] + 4 * v[gates[p + 2]] + 16 * v[gates[p + 3]]];
                 this.evaluations++;
-                if (v[g.q] !== value) { v[g.q] = value; for (const next of this.plan.fanout[g.q]) this._mark(next); }
+                if (v[q] !== value) { v[q] = value;
+                    for (let j = offsets[q]; j < offsets[q + 1]; j++) this._mark(targets[j]); }
             }
             queue.length = 0;
         }
@@ -152,10 +169,14 @@ export class DigitalSimulator {
             writes.push({ mi, offset, old: m.values.slice(offset, offset + m.width), data: m.data.map(p => this.values[p]) });
         }
         const before = this.historyLimit ? { ticks: this.ticks, roots: Uint32Array.from(this.roots, pin => this.values[pin]), writes } : null;
-        for (let i = 0; i < this.plan.flops.length; i++) this.nextFlops[i] = flopValue(this.values, this.plan.flops[i]);
+        const flops = this.flopWords, v = this.values;
+        for (let i = 0; i < this.nextFlops.length; i++) {
+            const p = i * 5, enabled = TRUTH_TABLE[512 + v[flops[p]] + 4 * v[flops[p + 1]] + 16 * v[flops[p + 2]]];
+            this.nextFlops[i] = TRUTH_TABLE[512 + enabled + 4 * flops[p + 4] + 16 * v[flops[p + 3]]];
+        }
         for (const w of writes) this.memories[w.mi].values.set(w.data, w.offset);
         if (writes.length) this.memoryRevision++;
-        for (let i = 0; i < this.plan.flops.length; i++) this.values[this.plan.flops[i].q] = this.nextFlops[i];
+        for (let i = 0; i < this.nextFlops.length; i++) v[flops[i * 5]] = this.nextFlops[i];
         this.ticks++;
         if (before) { this.history.push(before); if (this.history.length > this.historyLimit) this.history.shift(); }
         this.settle();

@@ -1,31 +1,24 @@
-/** Repeatable gate-backend benchmark; no timing thresholds in correctness tests.
- * Optional --baseline points to a prior DigitalSimulator module. Both versions
- * execute the SAME compiled circuit and must produce identical state/counters. */
+/** Reproducible CPU baseline. These are logical gates/clocks, not calibrated TX-2 timing. */
 import {performance} from 'node:perf_hooks';
-import {cpus} from 'node:os';
-import {resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {cpus,platform,arch} from 'node:os';
+import {mkdir,writeFile} from 'node:fs/promises';
 import {assemble} from '../packages/tx2-assembler/index.js';
-import {buildTX2Board} from '../packages/hardware-sim/tx2-board.js';
-import {DigitalSimulator} from '../packages/hardware-sim/digital.js';
-const args=process.argv.slice(2);
-if(args.length&&!((args.length===2)&&args[0]==='--baseline'))throw new Error('Usage: node tools/benchmark-hardware.mjs [--baseline module.mjs]');
-const engines=[];if(args.length)engines.push(['baseline',(await import(pathToFileURL(resolve(args[1])).href)).DigitalSimulator]);
-engines.push(['current',DigitalSimulator]);
-const image=assemble('.org 100\nLDA 200\nADD 201\nSTA 200\nJMP 100\n.org 200\n.word 0\n.word 1');
-const plan=buildTX2Board(image,{extended:true,depth:256}).plan,results=[];
-for(const [name,Simulator] of engines){
- const samples=[];
- for(let trial=0;trial<3;trial++){
-  const s=new Simulator(plan,{historyLimit:0});for(const [address,value]of image.words)s.poke('STUV',address,value);
-  s.run(500);let start=performance.now();s.run(3000);const clockMs=performance.now()-start;
-  start=performance.now();for(let i=0;i<10000;i++)s.settle();const settledMs=performance.now()-start;
-  samples.push({clockMs,settledMs,result:s.read('A').toString(),gateEvaluations:s.evaluations});
+import {TX2GateBoard} from '../packages/hardware-sim/tx2-board.js';
+const image=assemble('.org 100\nLOOP: LDA 200\nADD 201\nSTA 200\nJMP LOOP\n.org 200\n.word 0\n.word 1');
+if(image.diagnostics.length)throw new Error(JSON.stringify(image.diagnostics));
+const rows=[];
+for(const options of [{extended:false,inout:false},{extended:true,inout:false},{extended:false,inout:true},{extended:true,inout:true}]){
+ const start=performance.now(),board=new TX2GateBoard(image,options),setupMs=performance.now()-start,s=board.simulator;
+ s.run(256);const samples=[];let evaluations=0;
+ for(let n=0;n<3;n++){
+  const before=s.evaluations,start=performance.now();s.run(4096);
+  samples.push(performance.now()-start);evaluations+=s.evaluations-before;
  }
- results.push({name,clocks:3000,idleSettles:10000,samples,
-  medianClockMs:samples.map(s=>s.clockMs).sort((a,b)=>a-b)[1],medianIdleMs:samples.map(s=>s.settledMs).sort((a,b)=>a-b)[1]});
+ const sorted=[...samples].sort((a,b)=>a-b);
+ rows.push({options,setupMs,statistics:s.stats(),clocksPerSample:4096,samplesMs:samples,medianClocksPerSecond:4096000/sorted[1],gateEvaluationsPerClock:evaluations/(3*4096)});
 }
-const samples=results.flatMap(r=>r.samples),first=samples[0];
-if(samples.some(s=>s.result!==first.result||s.gateEvaluations!==first.gateEvaluations))throw new Error('Benchmark backends disagree on results or evaluation count');
-console.log(JSON.stringify({node:process.version,platform:process.platform,arch:process.arch,cpu:cpus()[0]?.model,
- model:'extended arithmetic loop, 256-word RAM macro, history disabled',gates:plan.gates.length,levels:plan.levels.length,results},null,2));
+const report={environment:{node:process.version,platform:platform(),arch:arch(),cpu:cpus()[0]?.model??'unknown'},
+ notes:'Single process, 256-clock warm-up, three samples, default reversible history. Setup excluded from throughput. Not a browser or physical-GPU benchmark; not historical TX-2 timing.',rows};
+await mkdir(new URL('../test-results/',import.meta.url),{recursive:true});
+await writeFile(new URL('../test-results/hardware-benchmark.json',import.meta.url),JSON.stringify(report,null,2)+'\n');
+console.log(JSON.stringify(report,null,2));
