@@ -87,14 +87,14 @@ fn execute(@builtin(local_invocation_index) lane:u32) {
             }
             // Validate every write before updating even one storage element.
             for(var i=0u;i<MEMORY_COUNT;i++) {
-                let m=MEMORIES+i*11u; let enable=wires[plan[m+6u]]; let at=record+plan[m+10u]; result[at]=NONE;
-                if(reason!=0u || enable==0u) { continue; }
-                if(enable!=1u) { reason=3u; continue; }
+                let m=MEMORIES+i*11u; let write_enable=wires[plan[m+6u]]; let at=record+plan[m+10u]; result[at]=NONE;
+                if(reason!=0u || write_enable==0u) { continue; }
+                if(write_enable!=1u) { reason=3u; continue; }
                 let address=memory_address(m);
                 if(address==NONE) { reason=4u; continue; }
-                var readonly=false;
-                for(var k=0u;k<plan[m+9u];k++) { let r=plan[m+8u]+k*2u; readonly = readonly || (address>=plan[r] && address<=plan[r+1u]); }
-                if(!readonly) { result[at]=address*plan[m]; }
+                var read_only=false;
+                for(var k=0u;k<plan[m+9u];k++) { let r=plan[m+8u]+k*2u; read_only = read_only || (address>=plan[r] && address<=plan[r+1u]); }
+                if(!read_only) { result[at]=address*plan[m]; }
             }
             result[1]=reason;
         }
