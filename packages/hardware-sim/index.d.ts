@@ -1,3 +1,5 @@
+import type {DeviceOptions, IOBoardState, BoardObservation, PenInput} from './io-types.js';
+export * from './io-types.js';
 /** Structural gates are logical models, not historically measured TX-2 electronics. */
 export type Integer = bigint | number | string;
 export type LogicState = 0 | 1 | 2 | 3;
@@ -110,10 +112,10 @@ export function extendedArithmeticCircuit(b:NetlistBuilder,cfg:Bus,old:Record<'A
 export const COMPACT_OPERATIONS:readonly string[];
 export const EXTENDED_OPERATIONS:readonly string[];
 export const BOARD_OPERATIONS:readonly string[];
-export interface BoardOptions extends DigitalOptions {memory?:'macro'|'gates';depth?:number;extended?:boolean}
+export interface BoardOptions extends DigitalOptions {memory?:'macro'|'gates';depth?:number;extended?:boolean;inout?:boolean;bootTape?:Uint8Array|null;deviceOptions?:DeviceOptions}
 export interface BoardImage {entry?:number;words:[number,bigint][];diagnostics?:{severity?:string}[]}
-export interface BuiltBoard {plan:CompiledNetlist;memory:'macro'|'gates';depth:number;initial:Map<number,bigint>}
-export type BoardState = Record<'P'|'Q'|'N'|'EA'|'phase'|'halt'|'retired'|'A'|'B'|'C'|'D'|'E'|'Z'|'faultCode',bigint>;
+export interface BuiltBoard {plan:CompiledNetlist;memory:'macro'|'gates';depth:number;initial:Map<number,bigint>;inout:boolean;initialMemories:Map<string,Map<number,bigint>>;traceDepth:number}
+export type BoardState = Record<'P'|'Q'|'N'|'EA'|'phase'|'halt'|'retired'|'A'|'B'|'C'|'D'|'E'|'Z'|'faultCode',bigint> & Partial<IOBoardState>;
 export function buildTX2Board(image:BoardImage,options?:BoardOptions):BuiltBoard;
 export class TX2GateBoard {constructor(image:BoardImage,options?:BoardOptions);board:BuiltBoard;simulator:DigitalSimulator;state():BoardState;stepInstruction(maxClocks?:number):BoardState & {clocks:number}}
 /** The caller may supply navigator.gpu; DOM WebGPU declarations are not required by CPU consumers. */
@@ -131,11 +133,11 @@ export class GPUClockedSimulator {
  simulator:DigitalSimulator;evaluator:WebGPUGateEvaluator;busy:boolean;settle():Promise<void>;clock():Promise<number>;dispose():void;
 }
 export type ModelKind = 'board'|'netlist'|'timed'|'electrical'|'mixed';
-export interface SessionConfiguration {kind?:ModelKind;source?:string;backend?:'cpu'|'webgpu';memory?:'macro'|'gates';extended?:boolean;dialect?:'explicit'|'m4';delayModel?:'inertial'|'transport'}
+export interface SessionConfiguration {kind?:ModelKind;source?:string;backend?:'cpu'|'webgpu';memory?:'macro'|'gates';extended?:boolean;dialect?:'explicit'|'m4';delayModel?:'inertial'|'transport';inout?:boolean;boot?:'image'|'tape';deviceOptions?:Omit<DeviceOptions,'tapeFrames'>}
 export interface AdvanceOptions {operation?:'run'|'clock'|'instruction'|'operatingPoint';budget?:number;step?:number;until?:number|null;breakpoint?:number|null}
 export interface SignalCone {port:string;bit:number;nodes:{pin:number;depth:number;name:string;driver:string;value:string;inputs:number[]}[]}
 export interface PoweredSummary {
- powered:true;kind:ModelKind;backend:string;busy:boolean;ticks:number|null;time:number|null;units:string;
+ inout:BoardObservation|null;powered:true;kind:ModelKind;backend:string;busy:boolean;ticks:number|null;time:number|null;units:string;
  ports:{name:string;width:number;bits:string;value:string}[];statistics:Partial<DigitalStats> & {events?:number};
  electrical:{iterations:number;residual:number;solved:boolean;nodes:number;components:number}|null;
  series:{time:number;values:Record<string,number|null>;currents:Record<string,number>}[];
@@ -147,9 +149,10 @@ export class HardwareSession {
  constructor();busy:boolean;configuration:SessionConfiguration|null;board?:TX2GateBoard|null;simulator:DigitalSimulator|TimedSimulator|ElectricalSimulator|MixedSignalSimulator|null;
  load(configuration?:SessionConfiguration):Promise<SessionSummary>;advance(options?:AdvanceOptions,onProgress?:(state:SessionSummary)=>void):Promise<SessionSummary>;
  digital():DigitalSimulator|TimedSimulator|null;electrical():ElectricalSimulator|null;
- pause():void;back():SessionSummary;checkpoint():SessionSummary;restoreCheckpoint():SessionSummary;
+ pen(input:PenInput):void;applyPen():void;pause():void;back():SessionSummary;checkpoint():SessionSummary;restoreCheckpoint():SessionSummary;
  exportSnapshot():string;restoreSnapshot(text:string):Promise<SessionSummary>;exportTrace():string;exportNetlist():string;
  inspect(port:string,bit?:number):SignalCone;summary():SessionSummary;dispose():void;
 }
 export function hardwareJSON(value:unknown):string;
-export function hardwareExamples():{name:string;kind:ModelKind;source:string}[];
+export interface HardwareExample extends SessionConfiguration {name:string;kind:ModelKind;source:string}
+export function hardwareExamples():HardwareExample[];
