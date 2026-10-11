@@ -48,14 +48,30 @@ export class DigitalSimulator {
         if (this.plan.cyclic) throw new Error('Clocked backend does not accept combinational loops; use TimedSimulator');
         if (!Number.isInteger(historyLimit) || historyLimit < 0 || historyLimit > 10000 || !Number.isSafeInteger(historyBytes) || historyBytes < 0)
             throw new RangeError('Invalid history budget');
-        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.backend = 'cpu-gates';
+        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.revision = 0; this.memoryRevision = 0; this.backend = 'cpu-gates';
         const driven = new Set(this.plan.gates.map(g => g.q));
         this.roots = this.plan.names.map((_name, i) => i).filter(i => !driven.has(i));
         this.lastRoots = new Uint32Array(this.roots.length).fill(4);
         this.levelOf = new Uint32Array(this.plan.gates.length);
         this.plan.levels.forEach((level, i) => level.forEach(g => this.levelOf[g] = i));
+        // Dense execution-only schedules retain the inspectable structural plan.
+        // CSR fanout avoids chasing hundreds of thousands of nested JS arrays.
+        this.gateWords = new Uint32Array(this.plan.gates.length * 5);
+        for (let i = 0; i < this.plan.gates.length; i++) {
+            const g = this.plan.gates[i], p = i * 5;
+            this.gateWords.set([g.op * 64, g.a, g.b, g.c, g.q], p);
+        }
+        this.flopWords = new Uint32Array(this.plan.flops.length * 5);
+        for (let i = 0; i < this.plan.flops.length; i++) {
+            const f = this.plan.flops[i]; this.flopWords.set([f.q, f.d, f.enable, f.reset, f.initial], i * 5);
+        }
+        this.fanoutOffsets = new Uint32Array(this.plan.names.length + 1);
+        for (let i = 0; i < this.plan.names.length; i++) this.fanoutOffsets[i + 1] = this.fanoutOffsets[i] + this.plan.fanout[i].length;
+        this.fanoutTargets = new Uint32Array(this.fanoutOffsets.at(-1));
+        for (let i = 0; i < this.plan.names.length; i++) this.fanoutTargets.set(this.plan.fanout[i], this.fanoutOffsets[i]);
         this.dirty = new Uint8Array(this.plan.gates.length);
         this.queues = this.plan.levels.map(() => []);
+        this.firstDirtyLevel = Infinity; this.lastDirtyLevel = -1;
         this._invalidate();
         this.historyLimit = Math.min(historyLimit, Math.floor(historyBytes / Math.max(1, this.roots.length * 4)));
         this.history = []; this.evaluations = 0;
@@ -64,27 +80,36 @@ export class DigitalSimulator {
         this.settle();
     }
     _mark(index) {
-        if (!this.dirty[index]) { this.dirty[index] = 1; this.queues[this.levelOf[index]].push(index); }
+        if (!this.dirty[index]) {
+            const level = this.levelOf[index]; this.dirty[index] = 1; this.queues[level].push(index);
+            if (level < this.firstDirtyLevel) this.firstDirtyLevel = level;
+            if (level > this.lastDirtyLevel) this.lastDirtyLevel = level;
+        }
     }
     _invalidate() { for (let i = 0; i < this.plan.gates.length; i++) this._mark(i); }
     _evaluate() {
-        const v = this.values;
+        const v = this.values, offsets = this.fanoutOffsets, targets = this.fanoutTargets, gates = this.gateWords;
         for (let i = 0; i < this.roots.length; i++) {
             const pin = this.roots[i];
-            if (v[pin] !== this.lastRoots[i]) { this.lastRoots[i] = v[pin]; for (const g of this.plan.fanout[pin]) this._mark(g); }
+            if (v[pin] !== this.lastRoots[i]) { this.lastRoots[i] = v[pin];
+                for (let j = offsets[pin]; j < offsets[pin + 1]; j++) this._mark(targets[j]); }
         }
         // A fanout gate is always in a later level. Process only gates whose
         // inputs changed; no heap, dynamic code generation, or instruction shortcut.
-        for (let level = 0; level < this.queues.length; level++) {
+        // Empty settles touch no dependency levels. Fanout can only extend the
+        // upper bound: no newly queued gate can precede the current level.
+        for (let level = this.firstDirtyLevel; level <= this.lastDirtyLevel; level++) {
             const queue = this.queues[level];
-            for (const index of queue) {
-                this.dirty[index] = 0;
-                const g = this.plan.gates[index], value = TRUTH_TABLE[g.op * 64 + v[g.a] + 4 * v[g.b] + 16 * v[g.c]];
+            for (let i = 0; i < queue.length; i++) {
+                const index = queue[i], p = index * 5, q = gates[p + 4]; this.dirty[index] = 0;
+                const value = TRUTH_TABLE[gates[p] + v[gates[p + 1]] + 4 * v[gates[p + 2]] + 16 * v[gates[p + 3]]];
                 this.evaluations++;
-                if (v[g.q] !== value) { v[g.q] = value; for (const next of this.plan.fanout[g.q]) this._mark(next); }
+                if (v[q] !== value) { v[q] = value;
+                    for (let j = offsets[q]; j < offsets[q + 1]; j++) this._mark(targets[j]); }
             }
             queue.length = 0;
         }
+        this.firstDirtyLevel = Infinity; this.lastDirtyLevel = -1;
     }
     _address(m) {
         let address = 0;
@@ -92,6 +117,8 @@ export class DigitalSimulator {
         return address < m.depth ? address : -1;
     }
     settle() {
+        // Host edits/reversal invalidate device-resident mirrors without hashing RAM.
+        this.revision++;
         this._evaluate();
         for (const m of this.memories) {
             const address = this._address(m);
@@ -101,7 +128,7 @@ export class DigitalSimulator {
     }
     reset({ clearMemory = false } = {}) {
         this.values.set(this.plan.initial); this.ticks = 0; this.history.length = 0;
-        if (clearMemory) for (const m of this.memories) m.values.fill(0);
+        if (clearMemory) { for (const m of this.memories) m.values.fill(0); this.memoryRevision++; }
         this._invalidate(); this.settle();
     }
     input(name, value) {
@@ -109,8 +136,7 @@ export class DigitalSimulator {
         writeBus(this.values, bus, value); this.history.length = 0; this.settle();
     }
     read(name) {
-        const bus = this.plan.outputs[name] ?? this.plan.inputs[name]; if (!bus) throw new Error(`Unknown port ${name}`);
-        return readBus(this.values, bus, name);
+        const bus = this.plan.outputs[name] ?? this.plan.inputs[name]; if (!bus) throw new Error(`Unknown port ${name}`); return readBus(this.values, bus, name);
     }
     memory(name) { const m = this.memories.find(m => m.name === name); if (!m) throw new Error(`Unknown memory ${name}`); return m; }
     poke(name, address, value) {
@@ -118,7 +144,7 @@ export class DigitalSimulator {
         if (!Number.isInteger(address) || address < 0 || address >= m.depth) throw new RangeError('Memory address out of range');
         value = BigInt(value); if (value < 0n || value >= 1n << BigInt(m.width)) throw new RangeError('Memory word does not fit');
         for (let i = 0; i < m.width; i++) m.values[address * m.width + i] = Number((value >> BigInt(i)) & 1n);
-        this.history.length = 0; this.settle();
+        this.memoryRevision++; this.history.length = 0; this.settle();
     }
     peek(name, address) {
         const m = this.memory(name);
@@ -143,9 +169,14 @@ export class DigitalSimulator {
             writes.push({ mi, offset, old: m.values.slice(offset, offset + m.width), data: m.data.map(p => this.values[p]) });
         }
         const before = this.historyLimit ? { ticks: this.ticks, roots: Uint32Array.from(this.roots, pin => this.values[pin]), writes } : null;
-        for (let i = 0; i < this.plan.flops.length; i++) this.nextFlops[i] = flopValue(this.values, this.plan.flops[i]);
+        const flops = this.flopWords, v = this.values;
+        for (let i = 0; i < this.nextFlops.length; i++) {
+            const p = i * 5, enabled = TRUTH_TABLE[512 + v[flops[p]] + 4 * v[flops[p + 1]] + 16 * v[flops[p + 2]]];
+            this.nextFlops[i] = TRUTH_TABLE[512 + enabled + 4 * flops[p + 4] + 16 * v[flops[p + 3]]];
+        }
         for (const w of writes) this.memories[w.mi].values.set(w.data, w.offset);
-        for (let i = 0; i < this.plan.flops.length; i++) this.values[this.plan.flops[i].q] = this.nextFlops[i];
+        if (writes.length) this.memoryRevision++;
+        for (let i = 0; i < this.nextFlops.length; i++) v[flops[i * 5]] = this.nextFlops[i];
         this.ticks++;
         if (before) { this.history.push(before); if (this.history.length > this.historyLimit) this.history.shift(); }
         this.settle();
@@ -155,6 +186,7 @@ export class DigitalSimulator {
         const h = this.history.pop(); if (!h) return false;
         this.roots.forEach((pin, i) => this.values[pin] = h.roots[i]); this.ticks = h.ticks;
         for (const w of h.writes) this.memories[w.mi].values.set(w.old, w.offset);
+        if (h.writes.length) this.memoryRevision++;
         this.settle(); return true;
     }
     run(budget = 1, stop = 'halt') {
@@ -176,7 +208,7 @@ export class DigitalSimulator {
             state.memories.some((m, i) => !valid(m, this.memories[i].values.length)) || state.values[0] !== 0 || state.values[1] !== 1)
             throw new Error('Snapshot does not match circuit, or contains invalid state');
         this.values.set(state.values); this.ticks = state.ticks;
-        state.memories.forEach((m, i) => this.memories[i].values.set(m)); this.history.length = 0; this._invalidate(); this.settle();
+        state.memories.forEach((m, i) => this.memories[i].values.set(m)); this.memoryRevision++; this.history.length = 0; this._invalidate(); this.settle();
     }
     stats() { return { backend: this.backend, wires: this.plan.names.length, gates: this.plan.gates.length,
         flipFlops: this.plan.flops.length, levels: this.plan.levels.length, memoryBits: this.memories.reduce((s, m) => s + m.values.length, 0),
@@ -192,9 +224,17 @@ export class Waveform {
     }
     capture(simulator) {
         const sample = { tick: simulator.ticks, bits: this.signals.map(s => s.bus.map(p => simulator.values[p]).reverse().map(v => '01xz'[v]).join('')) };
+        return this.append(sample);
+    }
+    /** Accept exact samples returned by a device batch without inventing intermediate states. */
+    append(sample) {
+        if (!Number.isSafeInteger(sample?.tick) || sample.tick < 0 || !Array.isArray(sample.bits) ||
+            sample.bits.length !== this.signals.length || sample.bits.some((bits, i) => typeof bits !== 'string' ||
+                bits.length !== this.signals[i].bus.length || /[^01xz]/.test(bits))) throw new Error('Invalid waveform sample');
+        const copy = { tick: sample.tick, bits: [...sample.bits] };
         // Rewinding forks the visible trace; VCD timestamps must not run backwards.
-        while (this.samples.length && this.samples.at(-1).tick >= sample.tick) this.samples.pop();
-        this.samples.push(sample); if (this.samples.length > this.limit) { this.samples.shift(); this.dropped++; } return sample;
+        while (this.samples.length && this.samples.at(-1).tick >= copy.tick) this.samples.pop();
+        this.samples.push(copy); if (this.samples.length > this.limit) { this.samples.shift(); this.dropped++; } return copy;
     }
     vcd() {
         const safe = name => name.replace(/[^A-Za-z0-9_$]/g, '_');

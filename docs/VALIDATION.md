@@ -1,42 +1,38 @@
-# Validation record — 0.3.0
+# Validation record — 0.5.0
 
-Validated on 11 October 2026. Local regression results are not historical hardware certification.
+Tests establish the behavior of the implemented research models, not historical hardware certification. CI archives exact source identity and generated artifacts for each tested commit.
 
-| Check | Result |
-|---|---|
-| JavaScript syntax | 56 modules checked by Node |
-| Automated regression tests | 247 passed; 0 failed; 0 skipped |
-| Source public TypeScript declarations | Strict NodeNext consumer compilation passed |
-| Isolated installed-package TypeScript consumer | Strict NodeNext compilation passed |
-| Static distribution | Built successfully |
-| Self-contained HTML | 34 embedded ESM modules; Worker starts without network dependencies |
-| Browser end-to-end workflows | 33 passed; no uncaught page errors |
-| Desktop | 1440 × 1150 viewport |
-| Mobile | 390 × 844 viewport; no horizontal document overflow |
-| Renderer exercised | Canvas 2D, including focus/sprite-cache behavior |
-| Binary tape diagnostic | 186 bytes; 649 executed instructions to user entry; payload executes |
-| Corrupt tape | Host decoder rejects bad checksum; executed reader leader independently restarts on corruption |
-| Reversibility | Complete boot reversal and independent mid-boot snapshot/resume passed |
-| Standalone npm package | Offline installation, API, declarations and CLI checked independently |
-| Hardware WebGPU/WGSL execution | Not verified |
-| Full original Sketchpad assembly and boot | No demonstrated success; no original-program execution claim |
-| Remote GitHub Actions | Not run |
+## Checks
 
-Environment: Node 22.16.0, npm 10.9.2, TypeScript 5.8.3; installed Python Playwright and Chromium. No runtime dependencies or implicit downloads were needed.
+The current local suite passes **358 Node regression tests**, **33 original-workspace browser workflows** and **24 hardware-browser workflows**, with no uncaught page errors. Strict source TypeScript checks and both isolated offline installed-package runtime/type consumers pass. Build output includes the standalone HTML and both 0.5.0 SDK tarballs. CI repeats these checks and requires actual resident-GPU execution with `tests/resident_browser.py --require-gpu`.
 
-## Coverage
+Hardware browser coverage includes gate-only execution isolation, explicit gate RAM, timed circuits, fixed/adaptive electrical behavior, mixed sampling, snapshots, source failures, breakpoints, pause, full tape entry, emitted scope geometry, live pen hits, punch frames and 390px layouts.
 
-The prior 192-test suite remains. Added tests cover TRAP mode decoding and old-metabit behavior, marking and atomic reversal, sequence interlocks and P mark preservation, external preemption/HOLD and post-transition breakpoints with reversible non-instruction boundary events, corrected TSD channels, ROM words/configuration initialization, actual tape-loader execution, multi-block checksums, complete boot reversal, corrupt-payload rejection by the reader leader, snapshot continuation, PETR clock/overrun/rewind, native PUNCH entry, deferred brackets, archival source offsets/nesting, include budgets/cycles and beam-energy invariants.
+## Actual GPU evidence
 
-This is not an exhaustive cross-product of every opcode, configuration, memory bank, peripheral mode and trap setting. Rendering is not an electrical model and the geometry solver is newly written.
+The pre-optimization PR run **38169617259** at `c795acefa7217de4d35e601b56ceb0eac9f85638` and single-pass run **38171931492** at `f51f30212b7a3c06ab9fa0204f9006cc7a8f8e98` both passed the resident conformance suite on **Google SwiftShader**, a software/fallback adapter.
 
-## Browser evidence
+| Same tape-boot fixture | Before RAM partition | Single-pass schedule |
+| --- | ---: | ---: |
+| Logical clocks | 9,020 | 9,020 |
+| Retired instructions | 649 | 649 |
+| GPU dispatches | 283 | 283 |
+| Gate evaluations | 903,339,906 | 451,669,953 |
+| Initial/changed state uploaded, bytes | 19,721,816 | 19,721,816 |
+| Batch readback, bytes | 168,951,000 | 168,951,000 |
+| Observed boot wall time, milliseconds | 56,374.5 | 27,390.1 |
 
-`test-results/browser-report.json` records 33 workflows. They cover the physical console, 37 pushbuttons/288 toggles, 33 sequence indicators, console-only mode, focus changes, worker execution/reversal, explicit and native compilation, timed scope output, tape download/cold bootstrap/entry breakpoint/payload/reset, failed tape-build and assembly locks, document drawing/constraints/undo/instances, physical light-pen gestures/text/HOLD, machine indicators, archive navigation and 390px mobile layout.
+The evaluation reduction is exact for this fixture: no gate is evaluated twice per settle after the change. Elapsed values are observations from different CI runs, **not a controlled physical-GPU benchmark or a promised speedup**. The bootstrap fixture has 48,551 gates; it is not the default extended arithmetic configuration.
 
-The browser suite uses `page.set_content` with the generated standalone HTML in Chromium. It exercises real DOM/Canvas, Blob ESM modules, Workers and pointer/keyboard events without network navigation. It does not certify file-URL policies, external HTTPS hosting, all browser engines or every touch device. A separate local-HTTP WebGPU probe was blocked by the environment's browser navigation policy; neither software nor hardware GPU execution is claimed from that attempt.
+The actual resident suite exercises 704 four-state gate combinations, batched clocks with two RAM banks/read-only regions, precise probes, reverse/input synchronization, fault rollback, concurrent/edit guards, gate-driven INOUT, internal breakpoints/instruction conditions, the complete 9,020-clock bootstrap, reversal of every retained boot clock, and public-session checkpoint/trace handling. Forward CPU gate methods are disabled in relevant tests to detect accidental fallback. The level-dispatch backend is separately compared against CPU storage and an INOUT scope board.
 
-Original-byte hash/audit logic is tested, but a complete original listing has not been successfully assembled or executed. Archive network operations were not replaced with fabricated bytes.
+The local browser permits standalone DOM/worker testing but blocks navigation needed by its GPU fixture. Local GPU availability is not counted as a pass. CI reports the adapter that actually executes WGSL. **Physical-GPU acceleration and complete historical transistor fidelity remain unverified.**
+
+## Electrical accuracy and rollback
+
+Tests cover analytic RC/RL responses, negative supply, Shockley current/KCL, NPN/PNP inversion, source breakpoints, mixed ADC/DAC sampling, singular circuits, adaptive tolerance behavior, late nonlinear failure, minimum/trial budgets and independent snapshot continuation. The adaptive example at 1 ms is within 0.003 V of the analytic 5 V RC charging response. Local error control is not a global accuracy guarantee.
+
+A regression reproduces the session's old premature endpoint at an internal PWL knot. Adaptive sessions now retain the requested outer time and mixed digital edge count; this is checked separately from the circuit solver itself.
 
 ## Reproduce
 
@@ -45,9 +41,15 @@ npm run check
 npm test
 npm run test:types
 npm run build
-python tests/browser_smoke.py --chromium /path/to/chromium
 npm run package:toolchain
-npm run test:package     # validates the installed tarball, not workspace links
+npm run test:package
+npm run package:hardware
+npm run test:hardware-package
+npm run test:browser
+npm run test:hardware-browser -- --gpu
+python tests/resident_browser.py --require-gpu
 ```
 
-TypeScript, Python Playwright and Chromium must be installed for their optional checks. The source archive contains the test code and reports. The standalone toolchain tarball is an installable local artifact, not an npm-registry publication.
+Reports: `test-results/browser-report.json`, `test-results/hardware/report.json`, `test-results/resident/report.json`, and `test-results/package-report.json`. CI source archives record their exact checkout SHA; a PR checkout may be a synthetic merge commit. Final distributions should be taken from the successful merged-main build.
+
+Neither byte identity, differential testing, bootstrap success nor these regression counts demonstrates full unmodified original Sketchpad execution, exhaustive instruction/device compatibility, original electrical timing or pixel-identical reconstruction.

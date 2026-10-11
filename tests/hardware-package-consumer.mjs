@@ -11,3 +11,17 @@ const mixed=new MixedSignalSimulator(JSON.parse(examples.find(e=>e.kind==='mixed
 const session=new HardwareSession();await session.load({...examples[0],extended:false});await session.advance({operation:'instruction'});
 const saved=session.exportSnapshot();await session.restoreSnapshot(saved);assert.equal(session.exportSnapshot(),saved);session.dispose();
 console.log('Installed hardware package: gates, compiled board, electrical, mixed, and session snapshots passed.');
+const withIO=new TX2GateBoard(assemble('.org 100\nIOS_60 30000'),{inout:true});
+withIO.stepInstruction();assert.equal(withIO.simulator.read('io60.connected'),1n);
+assert.equal(withIO.state().K,0n);
+assert.ok(withIO.state().flags&(1n<<0o60n));
+console.log('Installed SDK independently raises the ready scope sequence flag.');
+const {GPUResidentSimulator}=await import('@sketchpad-lab/hardware-sim');
+assert.equal(typeof GPUResidentSimulator.create,'function');
+await assert.rejects(GPUResidentSimulator.create(d,{gpu:null}),/unavailable/);
+
+const {AdaptiveElectricalSimulator}=await import('@sketchpad-lab/hardware-sim');
+const adaptive=new AdaptiveElectricalSimulator(JSON.parse(hardwareExamples().at(-1).source));
+const interval=adaptive.step(.001);assert.equal(interval.time,.001);assert.ok(interval.integration.acceptedSteps>1);
+assert.ok(Math.abs(adaptive.voltage('out')-5*(1-Math.exp(-1)))<.003);
+console.log('Installed adaptive electrical solver preserves endpoints and analytic RC accuracy.');

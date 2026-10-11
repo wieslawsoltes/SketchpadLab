@@ -4,6 +4,9 @@ import { Gate } from './logic.js';
 import { muxWords, exchangeCircuit, arithmeticCircuit, activeMaskCircuit, indexedAddressCircuit, gateRam, FRACTURES } from './circuits.js';
 import { OPCODES } from '../tx2-core/instruction.js';
 import { EXTENDED_OPERATIONS, extendedArithmeticCircuit } from './arithmetic-circuits.js';
+import { sequenceRegisters } from './sequences.js';
+import { inoutCircuit, INOUT_OPERATIONS } from './inout.js';
+import { PLUGBOARD_WORDS, PLUGBOARD_BASE, CONFIG_BOOT_ENTRY } from '../tx2-core/boot.js';
 import { STANDARD_CONFIGURATION } from '../tx2-core/standard-config.js';
 export const COMPACT_OPERATIONS=Object.freeze(['LDA','LDB','LDC','LDD','LDE','STA','STB','STC','STD','STE','RSX','AUX','DPX','EXX','ADX','SKX',
     'JMP','JPX','JNX','JPA','JNA','JOV','SPF','SPG','FLF','FLG','ADD','SUB','ITE','ITA','UNA','DSA','SED','EXA','INS','COM','SKM']);
@@ -12,7 +15,7 @@ export const BOARD_OPERATIONS=Object.freeze([...COMPACT_OPERATIONS,...EXTENDED_O
  * Execution has no call to TX2.execute/step or arithmetic interpreter. Instruction
  * decode, fetch/defer/execute sequencing, register writes and ALU are netlist gates.
  * The default RAM macro is an explicit abstraction; optional small RAM uses flops. */
-export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}={}) {
+export function buildTX2Board(image,{memory='macro',depth=131072,extended=false,inout=false,bootTape=null,deviceOptions={}}={}) {
     if(!['macro','gates'].includes(memory)||!Number.isInteger(depth)||depth<1||depth>131072||(memory==='gates'&&depth>512))throw new Error('Invalid board memory');
     if(!image||image.diagnostics?.some(d=>d.severity!=='warning')||!Array.isArray(image.words)||image.words.length>131072)throw new Error('Invalid assembly image');
     const initial=new Map();const addresses=[0o377604,0o377605,0o377606,0o377607,0o377610];
@@ -20,47 +23,73 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
         if(!Array.isArray(pair)||pair.length!==2||!Number.isInteger(pair[0])||pair[0]<0||pair[0]>=depth||typeof pair[1]!=='bigint'||pair[1]<0n||pair[1]>=1n<<36n||initial.has(pair[0]))throw new Error('Image does not fit board memory or overlaps');
         initial.set(...pair);
     }
-    const entry=image.entry??image.words[0]?.[0]??0;if(!Number.isInteger(entry)||entry<0||entry>=depth)throw new Error('Invalid board entry');
+    if(typeof inout!=='boolean'||typeof extended!=='boolean')throw new TypeError('Board feature switches must be boolean');
+    if(bootTape!==null){
+        if(!inout||depth!==131072||!(bootTape instanceof Uint8Array))throw new Error('Tape bootstrap requires the INOUT board and full address space');
+        initial.clear();PLUGBOARD_WORDS.forEach((v,i)=>initial.set(PLUGBOARD_BASE+i,v));
+    }
+    const entry=bootTape!==null?CONFIG_BOOT_ENTRY:image.entry??image.words[0]?.[0]??0;if(!Number.isInteger(entry)||entry<0||entry>=depth)throw new Error('Invalid board entry');
     const b=new NetlistBuilder('TX-2 structural research board'),zero36=b.constant(0,36),zero18=b.constant(0,18);
-    const phase=b.register('phase',2),P=b.register('P',18,BigInt(entry)),N=b.register('N',36),EA=b.register('EA',18),Q=b.register('Q',18);
+    const phase=b.register('phase',2,inout?3n:0n),P=b.register('P',18,BigInt(entry)),N=b.register('N',36),EA=b.register('EA',18),Q=b.register('Q',18);
     const regs=Object.fromEntries('ABCDE'.split('').map(name=>[name,b.register(name,36,initial.get(addresses['ABCDE'.indexOf(name)])??0n)]));
     const X=Array.from({length:64},(_,i)=>i?b.register(`X${i}`,18):{q:zero18});
-    const F=Array.from({length:32},(_,i)=>i?b.register(`F${i}`,9,BigInt(STANDARD_CONFIGURATION[i])):{q:b.constant(0,9)});
+    const F=Array.from({length:32},(_,i)=>i?b.register(`F${i}`,9,BigInt(bootTape!==null?0:STANDARD_CONFIGURATION[i])):{q:b.constant(0,9)});
     const Z=b.register('Z',4),halt=b.register('halt',1),retired=b.register('retired',32),deferCount=b.register('deferCount',13),registerMeta=b.register('registerMeta',1);
+    const sequence=inout?sequenceRegisters(b,entry,{initialFlags:bootTape!==null?1n:0n}):null;
+    const boundary=b.eqConstant(phase.q,3);
     const fetch=b.eqConstant(phase.q,0),resolve=b.eqConstant(phase.q,1),execute=b.eqConstant(phase.q,2),running=b.not(halt.q[0]);
     const op=N.q.slice(24,30),config=N.q.slice(30,35),j=N.q.slice(18,24),arg=N.q.slice(0,18);
-    const is=Object.fromEntries((extended?BOARD_OPERATIONS:COMPACT_OPERATIONS).map(name=>[name,b.eqConstant(op,OPCODES[name])]));
+    const is=Object.fromEntries([...(extended?BOARD_OPERATIONS:COMPACT_OPERATIONS),...(inout?INOUT_OPERATIONS:[])].map(name=>[name,b.eqConstant(op,OPCODES[name])]));
     const any=(...names)=>b.any(names.map(name=>is[name]));
     const x=muxWords(b,X.map(r=>r.q),j),cf=muxWords(b,F.map(r=>r.q),config);
-    const direct=b.or(is.SKX,is.JMP),deferred=b.and(EA.q[17],b.not(direct));
+    const direct=b.any([is.SKX,is.JMP,...(inout?[is.OPR]:[])]),deferred=b.and(EA.q[17],b.not(direct));
     const notIndexed=any('RSX','AUX','DPX','EXX','ADX','JPX','JNX','SKM','SKX');
     const useIndex=b.and(b.not(notIndexed),b.or(b.not(is.JMP),config[0]));
     const finalAddress=indexedAddressCircuit(b,EA.q,b.select(zero18,x,useIndex));
     const memAddress=b.select(EA.q.slice(0,17),P.q.slice(0,17),fetch);
     const registerSelect=addresses.map(a=>b.eqConstant(memAddress,a)),atRegister=b.any(registerSelect);
+    const clockPins=inout?Array.from({length:36},(_,i)=>b.wire('clockMapped['+i+']')):[];
+    const consolePorts=inout?[
+        {address:0o377620,bus:b.input('shaftEncoders',36),meta:b.input('shaftMeta')[0]},
+        {address:0o377621,bus:b.input('pushButtons',36),meta:b.input('buttonMeta')[0]},
+        {address:0o377630,bus:clockPins,meta:b.zero},
+        ...Array.from({length:8},(_,i)=>({address:0o377720+i,bus:b.input('toggle'+(0o20+i).toString(8),36),meta:b.zero}))
+    ].map(p=>({...p,select:b.eqConstant(memAddress,p.address)})):[];
+    const atConsole=b.any(consolePorts.map(p=>p.select));
     const writePins=Array.from({length:36},()=>b.wire()),writePin=b.wire(),metaWritePin=b.wire(),metaValuePin=b.wire();
     const isCore=b.not(b.add(memAddress,b.constant((1<<17)-0o220000,17)).carry);
     const isROM=b.all(memAddress.slice(5));
     const inDepth=depth===131072?b.one:b.not(b.add(memAddress,b.constant((1<<17)-depth,17)).carry);
-    const mapped=b.or(atRegister,b.and(inDepth,b.or(isCore,isROM)));
-    const dataWrite=b.all([writePin,b.not(atRegister),b.not(isROM)]),metaWrite=b.all([metaWritePin,b.not(atRegister),b.not(isROM)]);
+    const mapped=b.any([atRegister,atConsole,b.and(inDepth,b.or(isCore,isROM))]);
+    const dataWrite=b.all([writePin,b.not(atRegister),b.not(atConsole),b.not(isROM)]),metaWrite=b.all([metaWritePin,b.not(atRegister),b.not(atConsole),b.not(isROM)]);
     const ramArgs={name:'STUV',width:36,depth,address:memAddress,data:writePins,write:dataWrite,initial};
     const metaArgs={name:'META',width:1,depth,address:memAddress,data:[metaValuePin],write:metaWrite};
     const read=memory==='gates'?gateRam(b,ramArgs):b.ram('STUV',ramArgs);
     const metaRead=memory==='gates'?gateRam(b,metaArgs):b.ram('META',metaArgs);
     let m=read;for(let i=0;i<5;i++)m=b.select(m,regs['ABCDE'[i]].q,registerSelect[i]);
-    const meta=b.mux(metaRead[0],registerMeta.q[0],atRegister);
+    let meta=b.mux(metaRead[0],registerMeta.q[0],atRegister);
+    for(const p of consolePorts){m=b.select(m,p.bus,p.select);meta=b.mux(meta,p.meta,p.select);}
     const pointerX=muxWords(b,X.map(r=>r.q),m.slice(18,24));
     const pointerAddress=[...indexedAddressCircuit(b,m,pointerX),m[17]];
     const validOperation=b.any(Object.values(is));
-    const unsupportedControl=b.any([b.and(is.JMP,b.or(arg[17],config[4])),b.and(is.SKX,b.or(config[3],config[4])),b.and(any('JPX','JNX'),b.not(N.q[35]))]);
+    const ioCommit=b.wire('io.commit'),referenceEnable=b.wire('io.referenceEnable');
+    const io=inout?inoutCircuit(b,{K:sequence.K,flags:sequence.flags,unit:j,arg,config,cf,word:m,is,commit:ioCommit,
+        clockEnable:running,referenceEnable,references:{fetch,defer:b.and(resolve,deferred),operand:b.and(execute,b.not(direct)),meta},
+        markingDisabled:b.input('markingDisabled')[0]}, {...deviceOptions,tapeFrames:bootTape??deviceOptions.tapeFrames}):null;
+    if(io)clockPins.forEach((pin,i)=>b.drive(pin,Gate.BUF,i<32?io.clock[i]:b.zero));
+    const flagOperation=inout?b.or(b.and(is.SKX,config[3]),b.or(io.raise,io.lower)):b.zero;
+    const unsupportedControl=inout?b.or(b.and(is.JMP,arg[17]),b.and(flagOperation,b.not(io.validFlagUnit))):
+        b.any([b.and(is.JMP,b.or(arg[17],config[4])),b.and(is.SKX,b.or(config[3],config[4])),b.and(any('JPX','JNX'),b.not(N.q[35]))]);
     const deferLimit=b.and(resolve,b.and(deferred,b.eqConstant(deferCount.q,4096)));
     // A non-deferred RESOLVE computes the indexed target without reading RAM.
     // Only pointer-chasing reads the raw EA during this phase.
     const memoryNeeded=b.or(fetch,b.or(b.and(resolve,deferred),b.and(execute,b.not(direct))));
     const arithmeticFault=b.wire('arithmeticFault');
-    const fault=b.or(arithmeticFault,b.or(b.and(execute,b.or(b.not(validOperation),unsupportedControl)),b.or(deferLimit,b.and(memoryNeeded,b.not(mapped)))));
+    const peripheralFault=io?b.and(execute,b.or(io.commandFault,io.transferFault)):b.zero;
+    const invalidSequence=sequence?b.not(b.or(b.eqConstant(sequence.K,0),sequence.K[5])):b.zero;
+    const fault=b.or(b.any([arithmeticFault,peripheralFault,invalidSequence]),b.or(b.and(execute,b.or(b.not(validOperation),unsupportedControl)),b.or(deferLimit,b.and(memoryNeeded,b.not(mapped)))));
     const active=b.and(running,b.not(fault)),commit=b.and(execute,active);
+    b.drive(ioCommit,Gate.BUF,commit);b.drive(referenceEnable,Gate.BUF,active);
     const fetchNow=b.and(fetch,active),resolveNow=b.and(resolve,active);
     const normalResolve=b.and(resolveNow,b.not(deferred)),pointerResolve=b.and(resolveNow,deferred);
     const align=exchangeCircuit(b,cf,m,zero36),alignNoSign=exchangeCircuit(b,cf,m,zero36,{signExtend:false});
@@ -90,6 +119,10 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
     const tests=muxWords(b,groupTests,cf.slice(7,9));
     const indexJump=b.or(b.and(is.JPX,positive(x)),b.and(is.JNX,negative(x)));
     const takeJump=b.any([is.JMP,indexJump,b.and(is.JPA,tests[0]),b.and(is.JNA,tests[1]),b.and(is.JOV,tests[2])]);
+    const sequenceActions=sequence?sequence.connect({boundary,running,commit,hold:N.q[35],
+        dismiss:b.or(b.and(b.any([b.and(b.or(is.SKX,is.JMP),config[4]),io.dismiss,indexJump,is.TSD]),b.not(N.q[35])),io.retry),
+        raise:b.or(b.and(is.SKX,config[3]),io.raise),lower:io.lower,unit:j,
+        events:b.bits(Gate.OR,io.events,b.input('externalFlags',64)),p:P.q,placekeepers:X.map(r=>r.q),trapMode:io.mode}):null;
     // Bit selection, metadata and parity are circuits as well as the arithmetic path.
     const bitSelect=Array.from({length:36},(_,bit)=>b.eqConstant(j,(((Math.floor(bit/9)+1)%4)<<4)|(bit%9+1)));
     const bitNumber=j.slice(0,4),isMeta=b.eqConstant(bitNumber,10),isParity=b.or(b.eqConstant(bitNumber,11),b.eqConstant(bitNumber,12));
@@ -114,12 +147,15 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
     // Permutation zero after initial permutation; sign extension still honors fracture/activity.
     const com=exchangeCircuit(b,[...b.constant(0,3),...cf.slice(3)],complement,complement);
     store=b.select(store,com,is.COM);store=b.select(store,skmWord,is.SKM);
-    const writes=any('STA','STB','STC','STD','STE','EXA','EXX','ADX','DPX','INS','COM','FLF','FLG','SKM');
+    if(io)store=b.select(store,io.transferWord,io.memoryWrite);
+    const basicWrites=any('STA','STB','STC','STD','STE','EXA','EXX','ADX','DPX','INS','COM','FLF','FLG','SKM');
+    const writes=io?b.or(basicWrites,io.memoryWrite):basicWrites;
     const writing=b.and(commit,writes);
     store.forEach((pin,i)=>b.drive(writePins[i],Gate.BUF,pin));b.drive(writePin,Gate.BUF,writing);
     const writingMeta=b.all([commit,is.SKM,isMeta,b.or(config[0],config[1])]);
-    b.drive(metaWritePin,Gate.BUF,writingMeta);b.drive(metaValuePin,Gate.BUF,changedBit);
-    registerMeta.connect([changedBit],b.and(writingMeta,atRegister));
+    const autoMark=io?b.and(active,io.mark):b.zero,anyMetaWrite=b.or(writingMeta,autoMark),metaValue=b.mux(b.one,changedBit,writingMeta);
+    b.drive(metaWritePin,Gate.BUF,anyMetaWrite);b.drive(metaValuePin,Gate.BUF,metaValue);
+    registerMeta.connect([metaValue],b.and(anyMetaWrite,atRegister));
     const nextRegs={...old};
     for(const n of 'ABCDE')nextRegs[n]=b.select(old[n],loaded[n],is['LD'+n]);
     nextRegs.A=b.select(nextRegs.A,loaded.A,b.and(is.EXA,b.not(registerSelect[0])));
@@ -137,10 +173,21 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
     nextRegs.E=b.select(nextRegs.E,old.E.map((pin,i)=>b.mux(pin,b.and(pin,alignNoSign[i]),maskQuarters[i])),is.ITE);
     nextRegs.E=b.select(nextRegs.E,conditionalReturn,b.and(takeJump,b.not(is.JMP)));
     nextRegs.E=b.select(nextRegs.E,jmpE,is.JMP);
-    for(const n of 'ABCDE')regs[n].connect(nextRegs[n],commit);
+    if(io){
+        // TSD in sequences 0/75/76 cycles memory without writing E. Peripheral
+        // reports are sampled before their command changes connection/flag state.
+        nextRegs.E=b.select(nextRegs.E,old.E,is.TSD);
+        nextRegs.E=b.select(nextRegs.E,io.eWord,io.eWrite);
+        nextRegs.E=b.select(nextRegs.E,io.report,io.reportEnable);
+        nextRegs.E=b.select(nextRegs.E,sequenceActions.report,sequenceActions.change);
+    }
+    for(const n of 'ABCDE')regs[n].connect(nextRegs[n],n==='E'&&sequenceActions?b.or(commit,sequenceActions.change):commit);
     let xValue=x;for(const [name,value]of Object.entries({...nextX,AUX:xSum,SKX:muxWords(b,skxValues,mode),JPX:incrementedX,JNX:incrementedX}))xValue=b.select(xValue,value,is[name]);
     xValue=b.select(xValue,P.q,b.and(is.JMP,config[1]));
-    for(let i=1;i<64;i++)X[i].connect(xValue,b.and(commit,b.eqConstant(j,i)));
+    for(let i=1;i<64;i++){
+        const save=sequenceActions?b.and(sequenceActions.change,b.eqConstant(sequence.K,i)):b.zero;
+        X[i].connect(b.select(xValue,P.q,save),b.or(b.and(commit,b.eqConstant(j,i)),save));
+    }
     for(let i=1;i<32;i++){
         let value=F[i].q,enable=b.zero;
         for(let q=0;q<4;q++){
@@ -151,20 +198,28 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
     Z.connect(extra?b.select(arithmetic.Z,extra.Z,extra.enabled):arithmetic.Z,b.and(commit,extra?b.or(any('ADD','SUB'),extra.enabled):any('ADD','SUB')));
     const nextP=[...b.add(P.q.slice(0,17),b.constant(1,17)).sum,P.q[17]];
     const target=[...EA.q.slice(0,17),P.q[17]],jumpP=b.select(nextP,target,takeJump);
-    P.connect(b.select(b.select(P.q,nextP,fetch),b.select(P.q,jumpP,b.or(takeJump,skip)),execute),active);
+    let nextProgramCounter=b.select(b.select(P.q,nextP,fetch),b.select(P.q,jumpP,b.or(takeJump,skip)),execute);
+    if(io){
+        const retryP=[...b.add(P.q.slice(0,17),b.constant(0o377777,17)).sum,P.q[17]];
+        nextProgramCounter=b.select(nextProgramCounter,retryP,b.and(execute,io.retry));
+        nextProgramCounter=b.select(nextProgramCounter,sequenceActions.targetP,sequenceActions.change);
+    }
+    P.connect(nextProgramCounter,active);
     N.connect(b.select([...pointerAddress,...N.q.slice(18)],m,fetch),b.or(fetchNow,pointerResolve));
     // FETCH latches the operand from the current memory word, never the old N.
     EA.connect(b.select(b.select([...finalAddress,b.zero],pointerAddress,deferred),m.slice(0,18),fetch),b.or(fetchNow,resolveNow));
     Q.connect([...finalAddress,b.zero],b.and(normalResolve,b.not(direct)));
-    phase.connect(b.select(b.select(b.constant(1,2),b.constant(2,2),b.and(resolve,b.not(deferred))),b.constant(0,2),execute),active);
+    let nextPhase=b.select(b.select(b.constant(1,2),b.constant(2,2),b.and(resolve,b.not(deferred))),b.constant(inout?3:0,2),execute);
+    if(sequenceActions)nextPhase=b.select(nextPhase,b.select(b.constant(0,2),b.constant(3,2),sequenceActions.sleeping),boundary);
+    phase.connect(nextPhase,active);
     halt.connect([b.one],b.and(running,fault));
     retired.connect(b.add(retired.q,b.constant(1,32)).sum,commit);
     deferCount.connect(b.select(b.add(deferCount.q,b.constant(1,13)).sum,b.constant(0,13),fetch),b.or(fetchNow,pointerResolve));
     for(const [name,r]of Object.entries({P,N,Q,EA,phase,halt,retired,Z,...regs}))b.output(name,r.q);
     for(let i=0;i<64;i++)b.output(`X${i}`,X[i].q);for(let i=0;i<32;i++)b.output(`F${i}`,F[i].q);
     b.output('memoryAddress',memAddress);b.output('memoryData',m);b.output('writeData',store);b.output('writeEnable',[writing]);b.output('fault',[fault]);
-    b.output('faultCode',[b.not(validOperation),unsupportedControl,b.not(mapped),deferLimit,arithmeticFault]);
-    return {plan:b.compile(),memory,depth,initial};
+    b.output('faultCode',[b.not(validOperation),unsupportedControl,b.not(mapped),deferLimit,arithmeticFault,...(io?[peripheralFault,invalidSequence]:[])]);
+    return {plan:b.compile(),memory,depth,initial,inout,initialMemories:io?.initialMemories??new Map(),traceDepth:io?.traceDepth??0};
 }
 export class TX2GateBoard {
     constructor(image,options={}) {
@@ -173,12 +228,16 @@ export class TX2GateBoard {
             const m=this.simulator.memory('STUV');for(const [address,value]of this.board.initial)for(let bit=0;bit<36;bit++)m.values[address*36+bit]=Number(value>>BigInt(bit)&1n);
             this.simulator.settle();
         }
+        for(const [name,words]of this.board.initialMemories){
+            const m=this.simulator.memory(name);for(const [address,value]of words)for(let bit=0;bit<m.width;bit++)m.values[address*m.width+bit]=Number(value>>BigInt(bit)&1n);
+        }
+        this.simulator.settle();
     }
-    state(){const s=this.simulator;return Object.fromEntries(['P','Q','N','EA','phase','halt','retired','A','B','C','D','E','Z','faultCode'].map(n=>[n,s.read(n)]));}
-    stepInstruction(maxClocks=8198){
+    state(){const s=this.simulator;return Object.fromEntries(['P','Q','N','EA','phase','halt','retired','A','B','C','D','E','Z','faultCode',...(this.board.inout?['K','flags','limbo','previousHold','dismissed','TSP','deviceClock','tapePosition','scopeCount','punchCount','penHits']:[])].map(n=>[n,s.read(n)]));}
+    stepInstruction(maxClocks=100000){
         if(!Number.isInteger(maxClocks)||maxClocks<1||maxClocks>100000)throw new RangeError('Invalid clock budget');
         const before=this.simulator.read('retired');let clocks=0;
-        while(this.simulator.read('retired')===before&&!this.simulator.read('halt')&&clocks<maxClocks){this.simulator.clock();clocks++;}
+        while((this.simulator.read('retired')===before||(this.board.inout&&this.simulator.read('phase')===3n&&!this.simulator.read('limbo')))&&!this.simulator.read('halt')&&clocks<maxClocks){this.simulator.clock();clocks++;}
         return {clocks,...this.state()};
     }
 }

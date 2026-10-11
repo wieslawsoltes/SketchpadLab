@@ -1,5 +1,5 @@
 import {DigitalSimulator} from './digital.js';
-import {ElectricalSimulator} from './electrical.js';
+import {AdaptiveElectricalSimulator as ElectricalSimulator} from './adaptive.js';
 /** Sample-and-hold co-simulation. DAC outputs are held during each analog step;
  * ADCs sample its endpoint, then all digital flip-flops receive one common edge.
  * This is an explicit coupling scheme, not an analog solve of every digital gate. */

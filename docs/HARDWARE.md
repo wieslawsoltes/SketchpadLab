@@ -1,94 +1,78 @@
-# Hardware laboratory — 0.4.0
+# Optional hardware laboratory — 0.5.0
 
-The optional hardware laboratory runs independently of the drawing reconstruction and the existing instruction-level TX-2 emulator. It is off by default. Opening **Hardware** allocates no simulator; **Enable & build** starts a dedicated worker. Closing the panel pauses it, and **Power off** terminates the worker and releases its storage.
+Opening **Hardware** leaves the default drawing and instruction workspaces intact and allocates no hardware worker. **Enable & build** starts the selected independent model. Close pauses; **Power off** releases its worker and storage. This is working research simulation, not a complete historical TX-2 transistor reconstruction or a boot of the original Sketchpad application.
 
-**This is working structural/electrical research simulation, not a complete historically exact TX-2 netlist. The gate board does not boot the original Sketchpad program.**
+## Choose the execution abstraction
 
-## Models
-
-| Mode | What actually executes | Limits |
+| Model/backend | Forward execution | Explicit boundary |
 | --- | --- | --- |
-| Clocked digital | Validated 0/1/X/Z gates, levelized dirty propagation, simultaneous flip-flop sampling, explicit RAM ports | Ideal logical edges, no propagation/setup/hold timing |
-| Timed digital | Stable event heap, inertial or transport delays, same-time input batches and zero-delay delta cycles | Specified delays, not transistor voltages; explicit gate/flop storage, no RAM macros |
-| TX-2 gate board | Gate-built opcode decode, fetch/resolve/execute control, effective addresses, registers, exchanger and ALU | Synthesized research topology; single-sequence operation and explicit unsupported-case faults |
-| Electrical | Modified-nodal equations, backward-Euler RLC transients, Shockley diodes, Ebers–Moll NPN/PNP models and damped Newton iteration | Generic parameters, dense bounded solver; no parasitics, breakdown, thermal or magnetic-core model |
-| Mixed signal | Held DAC voltages, electrical integration, threshold/hysteresis ADC sampling, then a simultaneous digital clock | Sample-and-hold coupling, not analog evaluation of all Boolean gates |
+| CPU clocked gates | Validated four-state gates, packed schedules/CSR dirty fanout, simultaneous storage commits | Ideal logical edges, no analog voltages |
+| `webgpu` | One dispatch per dependency level; gate truth-table evaluation | Host flip-flop/RAM commits |
+| `webgpu-resident` | Gates, flip-flops, RAM and gate-built peripherals in bounded GPU batches | One cooperating workgroup per circuit; validated host inspection journal per batch |
+| Timed logic | Stable event heap, inertial/transport delays and delta cycles | Specified delays, not measured original electronics |
+| Electrical | Modified-nodal RLC, Shockley diodes and Ebers–Moll NPN/PNP with damped Newton iteration | Generic parameters, bounded dense solver |
+| Mixed signal | Held DAC voltages, electrical integration, ADC sampling, digital edge | Sample-and-hold coupling, not analog solving of every Boolean gate |
 
-The CPU digital backend evaluates only dirty fanout gates. The optional WGSL backend evaluates each dependency level in a distinct dispatch using the same four-state truth table. It does **not** call the instruction emulator. Storage commits remain explicit host boundaries. A GPU error restores committed storage and is reported; there is no silent CPU-execution fallback.
+The structural board includes compact 37-operation or extended 48-operation datapaths. INOUT adds OPR/IOS and TSD and enables structural sequences, TRAP, reader, scope, pen and punch. [Gate-I/O contracts](GATE-IO.md) describe exact supported modes and boot behavior. Unsupported operations/configurations stop rather than falling back to an instruction interpreter.
 
-The default remains CPU gates because readback and dispatch costs can outweigh GPU parallelism for a single sequential board. The extended board has 1,030 dependency levels, including the unrolled divider. A GPU option is not a speedup claim.
+RAM macros are the practical default. The small gate-RAM option explicitly instantiates its data/metabit flip-flops, read multiplexers and write decoders. Neither represents magnetic-core physics. Gate counts describe a synthesized implementation, not historical component counts; the current model's statistics panel reports its exact topology.
 
-## TX-2 research board
+## Resident scheduling and performance
 
-The compact board supports 37 opcode families. Extended arithmetic adds 11, for 48: multiply/divide, cycle/scale, normalize and tally networks. Carry-lookahead addition, carry-save multiplication, restoring division, barrel shifts, four fracture forms and 512 system-configuration values are elaborated into wire connectivity. No native integer ALU is used to manufacture the board's execution results.
+The resident shader uses one 64-invocation workgroup. Dependencies synchronize with storage barriers within that cooperating group; no cross-workgroup barrier is assumed. A packed topological schedule is partitioned at the asynchronous RAM read boundary. Only gate ancestors of RAM addresses run before the read; all other gates run afterwards. Every gate executes **once per settle**, without using stale RAM reads or modifying arithmetic semantics. RAM address feedback requires a register boundary and is rejected during validation.
 
-The standard extended configuration currently elaborates **214,395 gates and 1,736 flip-flops**. Its full address-space allocation contains 4,849,664 RAM/metabit cells in behavioral macros. These counts describe this synthesized implementation, not historical component counts.
+The schedule compiler is iterative O(wires + gates + edges). Batches are bounded by requested clocks, work and journal capacity. The host receives committed wire/probe state and reversible memory journals once per batch. Unchanged RAM is not repeatedly uploaded. Device loss, validation faults, invalid controls and conflicting host edits reject the batch; errors do not silently select another backend. Direct typed-array edits require `GPUResidentSimulator.invalidate()`; supported simulator mutations advance revision counters automatically.
 
-**STUV RAM macro** is the practical default. **256-word gate RAM** replaces both data and metadata arrays with explicit flip-flops, write decoders and read multiplexers. Library callers may select bounded gate-RAM depths up to 512 words. Neither storage option models magnetic cores electrically.
+CPU dirty propagation remains the default. GPU speedup is workload/adapter dependent. The release validation includes actual resident tape bootstrap, full reversal, multiple RAM banks, X/Z truth cases and mutation guards on SwiftShader. This is actual WGSL execution on a software adapter, not physical-GPU performance certification. See [measurements](VALIDATION.md).
 
-The gate board intentionally rejects INOUT/OPR/TSD, sequence-changing control forms, unimplemented arithmetic cases, and unsupported memory references. It does not implement sequence scheduling, TRAP 42, authentic tape transport, or the complete console/peripheral electronics. Those features must not be inferred from the separate instruction emulator's capabilities. Fetch/resolve/execute clocks are logical boundaries, not historical TX-2 cycle times.
+## Adaptive electrical integration
 
-A corrected address-validation regression covers a non-deferred operand whose raw address lies outside installed RAM but whose indexed effective address lies inside it. The converse still faults before register writeback.
+The existing fixed-step solver remains unchanged by default. Add this JSON member to an electrical circuit (or the `circuit` inside a mixed model) to enable internal step control:
 
-## Browser workflow
-
-Choose a TX-2 assembly example, a timed NAND latch/ring oscillator, an RC circuit, an NPN inverter, or a transistor/flip-flop mixed model. Select the backend and memory implementation, then build. Clock/step and instruction-step are distinct. Run is bounded, yields to Pause, and supports an octal instruction breakpoint. The existing Sketchpad model and instruction debugger are not reset.
-
-The workbench includes sampled logic/voltage/current traces, driver-cone inspection, checkpoints, clock/event reversal, source editing, portable snapshot import/export and structural-wiring export. Driver-cone inspection shows the state at the explicit Probe action. VCD uses one nanosecond per logical-clock index as an interchange scale; it does not assert a physical board clock period. Electrical trace JSON explicitly labels SI units.
-
-Failed builds leave the previous circuit available for inspection but prevent execution against edited, unbuilt source. Snapshots validate circuit identity, storage, events and resource limits before being accepted. Power off is the escape hatch for a long construction/solve operation.
-
-## Standalone package
-
-```sh
-npm run package:hardware
-npm install ./artifacts/sketchpad-lab-hardware-sim-0.4.0.tgz
+```json
+"integration": {
+  "mode": "adaptive",
+  "relativeTolerance": 0.00001,
+  "voltageTolerance": 0.000001,
+  "currentTolerance": 0.000000001,
+  "minStep": 1e-15,
+  "maxTrials": 10000
+}
 ```
+
+Each trial compares one full backward-Euler step with two half steps. Accepted state is the two-half-step result, with no extrapolation. Voltage/current tolerances normalize the local error estimate. Source slope changes are exact internal boundaries. This estimates local discretization error, not a guaranteed global error bound or physical component accuracy.
+
+One successful `step(dt)` commits exactly the requested observation endpoint and one reverse entry. Failed nonlinear/trial/minimum-step intervals restore all public state, even after internal steps were accepted. In mixed mode internal subdivisions do not add ADC samples or digital edges. Session source-breakpoint handling preserves that same outer interval. Fixed mode remains byte-compatible with the earlier solver when no integration setting is supplied.
 
 ```js
-import {NetlistBuilder, DigitalSimulator, TX2GateBoard} from '@sketchpad-lab/hardware-sim';
-import {assemble} from '@sketchpad-lab/hardware-sim/assembler';
-
-const b = new NetlistBuilder('counter');
-const counter = b.register('count', 8);
-counter.connect(b.add(counter.q, b.constant(1, 8)).sum);
-b.output('count', counter.q);
-const circuit = new DigitalSimulator(b.compile());
-circuit.run(259);
-console.log(circuit.read('count')); // 3n: evaluated from gates and flip-flops
-circuit.back();
-
-const image = assemble('.org 100\nLDA 200\nADD 201\n.org 200\n.word 0d1963\n.word 0d2026');
-if (image.diagnostics.length) throw new Error(JSON.stringify(image.diagnostics));
-const board = new TX2GateBoard(image, {extended: true, depth: 256});
-board.stepInstruction();
-board.stepInstruction();
-console.log(board.state().A); // 3989n
+import {AdaptiveElectricalSimulator} from '@sketchpad-lab/hardware-sim';
+const simulator = new AdaptiveElectricalSimulator({
+  integration: {mode: 'adaptive', relativeTolerance: 1e-5},
+  nodes: ['0', 'in', 'out'],
+  components: [
+    {name:'V', type:'V', p:'in', n:'0', source:5},
+    {name:'R', type:'R', p:'in', n:'out', value:1000},
+    {name:'C', type:'C', p:'out', n:'0', value:1e-6},
+  ],
+});
+const interval = simulator.step(0.001);
+console.log(interval.time, simulator.voltage('out'), interval.integration);
+simulator.back(); // Reverses the entire observation interval.
 ```
 
-The tarball includes all transitive modules and TypeScript declarations; it does not rely on repository-relative workspace installations. The combined TX-2 toolchain also exports this API from `@sketchpad-lab/tx2-toolchain/hardware`. No runtime dependency, server, API key, or GPU is required for CPU use.
+Node/saturation models do not include original transistor characterization, parasitic capacitances, breakdown, thermal feedback or core-memory effects. The solver is bounded and dense; it is not advertised as a full-machine transistor solver. Power off terminates its worker when a construction/solve is too long for interactive use.
 
-## Validation and evidence
+## Debugging, files and packages
+
+Clock and instruction steps remain distinct. Bounded runs yield for pause; breakpoints stop at fetch. Source edits disable stale-source execution. Checkpoints, imported snapshots, clock/event reversal, VCD and structural-wiring exports are available. Driver inspection reports the actual driver cone at Probe time. Analog trace JSON labels seconds, volts and amperes. VCD's nanosecond scale for logical-clock indices is an interchange convention, not a calibrated machine clock.
 
 ```sh
-npm run test:hardware
 npm run package:hardware
-npm run test:hardware-package
-npm run build
-npm run test:hardware-browser -- --gpu
-# For a capable validation host, require actual shader execution:
-python tests/hardware_browser.py --gpu --require-gpu
+npm install ./artifacts/sketchpad-lab-hardware-sim-0.5.0.tgz
 ```
 
-Tests compare all 512 exchanger configurations with the independent instruction implementation, exercise compact/extended instruction families, and check analytic RC/RL curves, diode KCL, NPN/PNP states, mixed-signal coupling, timing cancellation, snapshot rejection and reversal. Such differential tests do not establish historical electrical accuracy.
+The self-contained package includes all transitive modules and strict declarations; the combined toolchain also exports `/hardware`. CPU use requires neither browser globals nor GPU access. No registry publication is implied. Public `ElectricalSimulator` remains the fixed base implementation; `AdaptiveElectricalSimulator` exposes adaptive behavior explicitly, while sessions honor circuit metadata.
 
-The optional GPU test executes all 704 four-state gate cases and compares 16 GPU-clocked storage transitions plus reversal when an adapter is available. Missing/blocked adapters are recorded as unavailable. An available adapter producing wrong results fails the suite; `--require-gpu` also rejects unavailability. Physical-GPU performance/accuracy is not inferred from software-adapter execution.
+[Bootstrap SDK example](GATE-IO.md) · [Validation](VALIDATION.md) · [Compatibility](COMPATIBILITY.md)
 
-## References
-
-- TX-2 Technical Manual and Users Handbook: https://tx-2.github.io/documentation/
-- Attributed instruction/exchanger reference implementation: https://github.com/TX-2/TX-2-simulator
-- WebGPU synchronization and usage scopes: https://www.w3.org/TR/webgpu/
-- WGSL: https://www.w3.org/TR/WGSL/
-
-Original circuit-card transcription, component characterization, physical timing, core-memory behavior, complete I/O, and original-program replay remain separate acceptance requirements.
+Synchronization reference: https://www.w3.org/TR/WGSL/#synchronization-builtin-functions. Hardware references and attribution are listed in [SOURCES.md](SOURCES.md).

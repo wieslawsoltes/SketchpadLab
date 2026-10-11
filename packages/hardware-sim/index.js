@@ -12,3 +12,8 @@ export * from './tx2-board.js';
 export * from './webgpu.js';
 export * from './session.js';
 export * from './examples.js';
+export * from './sequences.js';
+export * from './inout.js';
+export * from './observe.js';
+export * from './resident.js';
+export * from './adaptive.js';

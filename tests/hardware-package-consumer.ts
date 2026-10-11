@@ -9,3 +9,22 @@ if(summary.powered){const clock:number|null=summary.ticks;void clock;}
 const unknown:2=Logic.X;void [value,state,unknown];
 // @ts-expect-error Logic state and voltage component schema must not silently accept invalid values.
 const bad:ElectricalCircuit={nodes:['0','a'],components:[{name:'R',type:'R',p:'a',n:'0',source:1}]};void bad;
+import {observeBoard,priorityCircuit,sequenceRegisters,type DeviceOptions,type PenInput} from '@sketchpad-lab/hardware-sim';
+const options:DeviceOptions={readerPeriod:48,traceDepth:32};
+const io=new TX2GateBoard(assemble('.org 100\nIOS_60 30000'),{inout:true,deviceOptions:options});
+const k:bigint|undefined=io.state().K;const observation=observeBoard(io);void [k,observation,priorityCircuit,sequenceRegisters];
+const pen:PenInput={x:0,y:0,down:true,radius:8};session.pen(pen);
+// @ts-expect-error Device periods are numeric, not source code or expressions.
+const invalidPeriod:DeviceOptions={readerPeriod:'fast'};void invalidPeriod;
+
+import {GPUResidentSimulator,type ResidentResult,type ResidentStats} from '@sketchpad-lab/hardware-sim';
+async function residentConsumer(sim:DigitalSimulator):Promise<ResidentResult>{
+ const gpu=await GPUResidentSimulator.create(sim,{probes:['q'],maxBatch:8});
+ try{const stats:ResidentStats=gpu.stats();void stats;return await gpu.run(8);}finally{gpu.dispose();}
+}
+void residentConsumer;
+
+import {AdaptiveElectricalSimulator,type AdaptiveCircuit,type AdaptiveIntegrationResult} from '@sketchpad-lab/hardware-sim';
+const adaptiveCircuit:AdaptiveCircuit={...circuit,integration:{mode:'adaptive',relativeTolerance:1e-4}};
+const adaptiveResult:AdaptiveIntegrationResult=new AdaptiveElectricalSimulator(adaptiveCircuit).stepAdaptive(.001);
+const substeps:number=adaptiveResult.integration.acceptedSteps;void substeps;
