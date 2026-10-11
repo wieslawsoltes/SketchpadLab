@@ -16,3 +16,10 @@ const k:bigint|undefined=io.state().K;const observation=observeBoard(io);void [k
 const pen:PenInput={x:0,y:0,down:true,radius:8};session.pen(pen);
 // @ts-expect-error Device periods are numeric, not source code or expressions.
 const invalidPeriod:DeviceOptions={readerPeriod:'fast'};void invalidPeriod;
+
+import {GPUResidentSimulator,type ResidentResult,type ResidentStats} from '@sketchpad-lab/hardware-sim';
+async function residentConsumer(sim:DigitalSimulator):Promise<ResidentResult>{
+ const gpu=await GPUResidentSimulator.create(sim,{probes:['q'],maxBatch:8});
+ try{const stats:ResidentStats=gpu.stats();void stats;return await gpu.run(8);}finally{gpu.dispose();}
+}
+void residentConsumer;

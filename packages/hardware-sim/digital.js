@@ -48,7 +48,7 @@ export class DigitalSimulator {
         if (this.plan.cyclic) throw new Error('Clocked backend does not accept combinational loops; use TimedSimulator');
         if (!Number.isInteger(historyLimit) || historyLimit < 0 || historyLimit > 10000 || !Number.isSafeInteger(historyBytes) || historyBytes < 0)
             throw new RangeError('Invalid history budget');
-        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.revision = 0; this.backend = 'cpu-gates';
+        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.revision = 0; this.memoryRevision = 0; this.backend = 'cpu-gates';
         const driven = new Set(this.plan.gates.map(g => g.q));
         this.roots = this.plan.names.map((_name, i) => i).filter(i => !driven.has(i));
         this.lastRoots = new Uint32Array(this.roots.length).fill(4);
@@ -111,7 +111,7 @@ export class DigitalSimulator {
     }
     reset({ clearMemory = false } = {}) {
         this.values.set(this.plan.initial); this.ticks = 0; this.history.length = 0;
-        if (clearMemory) for (const m of this.memories) m.values.fill(0);
+        if (clearMemory) { for (const m of this.memories) m.values.fill(0); this.memoryRevision++; }
         this._invalidate(); this.settle();
     }
     input(name, value) {
@@ -127,7 +127,7 @@ export class DigitalSimulator {
         if (!Number.isInteger(address) || address < 0 || address >= m.depth) throw new RangeError('Memory address out of range');
         value = BigInt(value); if (value < 0n || value >= 1n << BigInt(m.width)) throw new RangeError('Memory word does not fit');
         for (let i = 0; i < m.width; i++) m.values[address * m.width + i] = Number((value >> BigInt(i)) & 1n);
-        this.history.length = 0; this.settle();
+        this.memoryRevision++; this.history.length = 0; this.settle();
     }
     peek(name, address) {
         const m = this.memory(name);
@@ -154,6 +154,7 @@ export class DigitalSimulator {
         const before = this.historyLimit ? { ticks: this.ticks, roots: Uint32Array.from(this.roots, pin => this.values[pin]), writes } : null;
         for (let i = 0; i < this.plan.flops.length; i++) this.nextFlops[i] = flopValue(this.values, this.plan.flops[i]);
         for (const w of writes) this.memories[w.mi].values.set(w.data, w.offset);
+        if (writes.length) this.memoryRevision++;
         for (let i = 0; i < this.plan.flops.length; i++) this.values[this.plan.flops[i].q] = this.nextFlops[i];
         this.ticks++;
         if (before) { this.history.push(before); if (this.history.length > this.historyLimit) this.history.shift(); }
@@ -164,6 +165,7 @@ export class DigitalSimulator {
         const h = this.history.pop(); if (!h) return false;
         this.roots.forEach((pin, i) => this.values[pin] = h.roots[i]); this.ticks = h.ticks;
         for (const w of h.writes) this.memories[w.mi].values.set(w.old, w.offset);
+        if (h.writes.length) this.memoryRevision++;
         this.settle(); return true;
     }
     run(budget = 1, stop = 'halt') {
@@ -185,7 +187,7 @@ export class DigitalSimulator {
             state.memories.some((m, i) => !valid(m, this.memories[i].values.length)) || state.values[0] !== 0 || state.values[1] !== 1)
             throw new Error('Snapshot does not match circuit, or contains invalid state');
         this.values.set(state.values); this.ticks = state.ticks;
-        state.memories.forEach((m, i) => this.memories[i].values.set(m)); this.history.length = 0; this._invalidate(); this.settle();
+        state.memories.forEach((m, i) => this.memories[i].values.set(m)); this.memoryRevision++; this.history.length = 0; this._invalidate(); this.settle();
     }
     stats() { return { backend: this.backend, wires: this.plan.names.length, gates: this.plan.gates.length,
         flipFlops: this.plan.flops.length, levels: this.plan.levels.length, memoryBits: this.memories.reduce((s, m) => s + m.values.length, 0),
@@ -201,9 +203,17 @@ export class Waveform {
     }
     capture(simulator) {
         const sample = { tick: simulator.ticks, bits: this.signals.map(s => s.bus.map(p => simulator.values[p]).reverse().map(v => '01xz'[v]).join('')) };
+        return this.append(sample);
+    }
+    /** Accept exact samples returned by a device batch without inventing intermediate states. */
+    append(sample) {
+        if (!Number.isSafeInteger(sample?.tick) || sample.tick < 0 || !Array.isArray(sample.bits) ||
+            sample.bits.length !== this.signals.length || sample.bits.some((bits, i) => typeof bits !== 'string' ||
+                bits.length !== this.signals[i].bus.length || /[^01xz]/.test(bits))) throw new Error('Invalid waveform sample');
+        const copy = { tick: sample.tick, bits: [...sample.bits] };
         // Rewinding forks the visible trace; VCD timestamps must not run backwards.
-        while (this.samples.length && this.samples.at(-1).tick >= sample.tick) this.samples.pop();
-        this.samples.push(sample); if (this.samples.length > this.limit) { this.samples.shift(); this.dropped++; } return sample;
+        while (this.samples.length && this.samples.at(-1).tick >= copy.tick) this.samples.pop();
+        this.samples.push(copy); if (this.samples.length > this.limit) { this.samples.shift(); this.dropped++; } return copy;
     }
     vcd() {
         const safe = name => name.replace(/[^A-Za-z0-9_$]/g, '_');

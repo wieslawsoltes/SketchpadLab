@@ -101,7 +101,7 @@ export class GPUClockedSimulator {
         const s=this.simulator;s.values.set(await this.evaluator.evaluate(s.values));
         for(const m of s.memories){const address=s._address(m);for(let bit=0;bit<m.width;bit++)s.values[m.read[bit]]=address<0?2:m.values[address*m.width+bit];}
         if(s.memories.length)s.values.set(await this.evaluator.evaluate(s.values));
-        s.roots.forEach((pin,i)=>s.lastRoots[i]=s.values[pin]);
+        s.roots.forEach((pin,i)=>s.lastRoots[i]=s.values[pin]);s.revision++;
     }
     async clock(){
         if(this.busy)throw new Error('Concurrent GPU clocks are not allowed');this.busy=true;
@@ -116,7 +116,7 @@ export class GPUClockedSimulator {
             }
             journal={ticks:s.ticks,roots:Uint32Array.from(s.roots,pin=>s.values[pin]),writes};
             s.plan.flops.forEach((f,i)=>s.nextFlops[i]=flopValue(s.values,f));
-            for(const w of writes)s.memories[w.mi].values.set(w.data,w.offset);
+            for(const w of writes)s.memories[w.mi].values.set(w.data,w.offset);if(writes.length)s.memoryRevision++;
             s.plan.flops.forEach((f,i)=>s.values[f.q]=s.nextFlops[i]);s.ticks++;
             await this.settle();
             if(s.historyLimit){s.history.push(journal);if(s.history.length>s.historyLimit)s.history.shift();}

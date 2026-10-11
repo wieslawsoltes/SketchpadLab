@@ -15,3 +15,4 @@ export * from './examples.js';
 export * from './sequences.js';
 export * from './inout.js';
 export * from './observe.js';
+export * from './resident.js';

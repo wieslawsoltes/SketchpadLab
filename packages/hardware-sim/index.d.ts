@@ -47,7 +47,7 @@ export interface DigitalStats {backend:string;wires:number;gates:number;flipFlop
 export function importNetlist(source:Netlist):CompiledNetlist;
 export function flopValue(values:ArrayLike<number>,f:FlipFlop):LogicState;
 export class DigitalSimulator {
- constructor(plan:Netlist,options?:DigitalOptions);plan:CompiledNetlist;values:Uint32Array;ticks:number;backend:string;
+ constructor(plan:Netlist,options?:DigitalOptions);plan:CompiledNetlist;values:Uint32Array;ticks:number;revision:number;memoryRevision:number;backend:string;
  memories:(MemoryPort & {values:Uint32Array})[];history:unknown[];historyLimit:number;evaluations:number;
  settle():void;reset(options?:{clearMemory?:boolean}):void;input(name:string,value:Integer):void;read(name:string):bigint;
  memory(name:string):MemoryPort & {values:Uint32Array};poke(name:string,address:number,value:Integer):void;peek(name:string,address:number):bigint;
@@ -57,7 +57,7 @@ export class DigitalSimulator {
 export interface WaveSample {tick:number;bits:string[]}
 export class Waveform {
  constructor(plan:Netlist,names:string[],options?:{limit?:number;tickNs?:number});signals:{name:string;bus:Bus}[];samples:WaveSample[];limit:number;tickNs:number;dropped:number;
- capture(simulator:{ticks:number;values:ArrayLike<number>}):WaveSample;vcd():string;
+ capture(simulator:{ticks:number;values:ArrayLike<number>}):WaveSample;append(sample:WaveSample):WaveSample;vcd():string;
 }
 export interface TimedOptions {delayModel?:'inertial'|'transport';clockToQ?:number;maxEvents?:number;traceLimit?:number}
 export interface TimedSnapshot {
@@ -133,7 +133,7 @@ export class GPUClockedSimulator {
  simulator:DigitalSimulator;evaluator:WebGPUGateEvaluator;busy:boolean;settle():Promise<void>;clock():Promise<number>;dispose():void;
 }
 export type ModelKind = 'board'|'netlist'|'timed'|'electrical'|'mixed';
-export interface SessionConfiguration {kind?:ModelKind;source?:string;backend?:'cpu'|'webgpu';memory?:'macro'|'gates';extended?:boolean;dialect?:'explicit'|'m4';delayModel?:'inertial'|'transport';inout?:boolean;boot?:'image'|'tape';deviceOptions?:Omit<DeviceOptions,'tapeFrames'>}
+export interface SessionConfiguration {kind?:ModelKind;source?:string;backend?:'cpu'|'webgpu'|'webgpu-resident';memory?:'macro'|'gates';extended?:boolean;dialect?:'explicit'|'m4';delayModel?:'inertial'|'transport';inout?:boolean;boot?:'image'|'tape';deviceOptions?:Omit<DeviceOptions,'tapeFrames'>}
 export interface AdvanceOptions {operation?:'run'|'clock'|'instruction'|'operatingPoint';budget?:number;step?:number;until?:number|null;breakpoint?:number|null}
 export interface SignalCone {port:string;bit:number;nodes:{pin:number;depth:number;name:string;driver:string;value:string;inputs:number[]}[]}
 export interface PoweredSummary {
@@ -142,7 +142,7 @@ export interface PoweredSummary {
  electrical:{iterations:number;residual:number;solved:boolean;nodes:number;components:number}|null;
  series:{time:number;values:Record<string,number|null>;currents:Record<string,number>}[];
  signals?:{name:string;width:number}[];wave?:WaveSample[];checkpoint:boolean;reversible:number;
- lastRun:{executed:number;reason:string;wallMs:number}|null;gpu:{evaluations:number;dispatches:number}|null;
+ lastRun:{executed:number;reason:string;wallMs:number}|null;gpu:({evaluations:number;dispatches:number}&Partial<import('./resident-types.js').ResidentStats>)|null;
 }
 export type SessionSummary = {powered:false} | PoweredSummary;
 export class HardwareSession {
@@ -156,3 +156,5 @@ export class HardwareSession {
 export function hardwareJSON(value:unknown):string;
 export interface HardwareExample extends SessionConfiguration {name:string;kind:ModelKind;source:string}
 export function hardwareExamples():HardwareExample[];
+
+export * from './resident-types.js';

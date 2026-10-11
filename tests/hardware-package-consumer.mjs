@@ -16,3 +16,6 @@ withIO.stepInstruction();assert.equal(withIO.simulator.read('io60.connected'),1n
 assert.equal(withIO.state().K,0n);
 assert.ok(withIO.state().flags&(1n<<0o60n));
 console.log('Installed SDK independently raises the ready scope sequence flag.');
+const {GPUResidentSimulator}=await import('@sketchpad-lab/hardware-sim');
+assert.equal(typeof GPUResidentSimulator.create,'function');
+await assert.rejects(GPUResidentSimulator.create(d,{gpu:null}),/unavailable/);

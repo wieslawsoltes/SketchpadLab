@@ -24,11 +24,11 @@ export class GPUResidentSimulator {
     }
     constructor(simulator, device, options = {}) {
         this.layout = packResidentPlan(simulator.plan, options);
-        if (simulator.plan.fingerprint !== this.layout.plan.fingerprint || !Number.isSafeInteger(simulator.revision))
+        if (simulator.plan.fingerprint !== this.layout.plan.fingerprint || !Number.isSafeInteger(simulator.revision) || !Number.isSafeInteger(simulator.memoryRevision))
             throw new Error('Resident execution requires a matching versioned DigitalSimulator');
         this.simulator = simulator; this.device = device; this.busy = false; this.failure = null;
         this.backend = 'webgpu-resident'; this.resources = []; this.dispatches = 0; this.evaluations = 0;
-        this.uploadedBytes = 0; this.readbackBytes = 0; this.uploadedRevision = -1;
+        this.uploadedBytes = 0; this.readbackBytes = 0; this.uploadedRevision = -1; this.uploadedMemoryRevision = -1;
         this.batchCapacity = this.layout.capacity; this.initialized = false;
         device.lost.then(info => { this.failure = new Error(`WebGPU device lost: ${info.message || info.reason}`); });
     }
@@ -71,16 +71,18 @@ export class GPUResidentSimulator {
     }
     /** Required only for edits made by directly assigning exposed typed arrays.
      * Public DigitalSimulator mutations already advance its revision. */
-    invalidate() { this.uploadedRevision = -1; }
+    invalidate() { this.uploadedRevision = -1; this.uploadedMemoryRevision = -1; }
     _upload() {
         const s = this.simulator, l = this.layout;
-        if (s.revision === this.uploadedRevision) return;
+        if (s.revision === this.uploadedRevision && s.memoryRevision === this.uploadedMemoryRevision) return;
+        const memoryChanged = s.memoryRevision !== this.uploadedMemoryRevision;
         if (s.values.length !== l.wireWords || s.values[0] !== 0 || s.values[1] !== 1 || s.values.some(v => v > 3) ||
-            s.memories.length !== l.memoryLayout.length || s.memories.some((m, i) => m.values.length !== l.memoryLayout[i].width * l.memoryLayout[i].depth || m.values.some(v => v > 3)))
+            s.memories.length !== l.memoryLayout.length || (memoryChanged && s.memories.some((m, i) => m.values.length !== l.memoryLayout[i].width * l.memoryLayout[i].depth || m.values.some(v => v > 3))))
             throw new Error('Invalid resident mirror state');
         this.device.queue.writeBuffer(this.wireBuffer, 0, s.values);
         this.uploadedBytes += s.values.byteLength;
-        s.memories.forEach((m, i) => { this.device.queue.writeBuffer(this.ramBuffer, l.memoryLayout[i].ramOffset * 4, m.values); this.uploadedBytes += m.values.byteLength; });
+        if (memoryChanged) s.memories.forEach((m, i) => { this.device.queue.writeBuffer(this.ramBuffer, l.memoryLayout[i].ramOffset * 4, m.values); this.uploadedBytes += m.values.byteLength; });
+        this.uploadedMemoryRevision = s.memoryRevision;
         this.uploadedRevision = s.revision;
     }
     async run(budget = 1, { stop = true, breakpoint = null, retired = null } = {}) {
@@ -97,7 +99,7 @@ export class GPUResidentSimulator {
         if (retired !== null && (!Number.isInteger(retired) || retired < 0 || retired > 0xffffffff || l.ports.retired.width !== 32 ||
             l.ports.phase.width !== 2 || ![0, 1].includes(l.ports.limbo.width))) throw new Error('Instruction condition requires board control ports');
         this.busy = true;
-        const d = this.device, startTicks = s.ticks, revision = s.revision;
+        const d = this.device, startTicks = s.ticks, revision = s.revision, memoryRevision = s.memoryRevision;
         d.pushErrorScope('validation'); d.pushErrorScope('out-of-memory');
         let error = null, result;
         try {
@@ -117,13 +119,15 @@ export class GPUResidentSimulator {
         try {
             const oom = await d.popErrorScope(), validation = await d.popErrorScope();
             if (error) throw error; if (oom || validation) throw new Error((oom || validation).message); if (this.failure) throw this.failure;
-            if (revision !== s.revision || startTicks !== s.ticks) throw new Error('Simulator mirror was edited during GPU execution');
+            if (revision !== s.revision || memoryRevision !== s.memoryRevision || startTicks !== s.ticks) throw new Error('Simulator mirror was edited during GPU execution');
             // Install only fully validated data. The GPU is the forward executor;
             // these are state transfers and history records, not CPU gate results.
             for (const journal of result.journals) {
                 for (const w of journal.writes) s.memories[w.mi].values.set(w.data, w.offset);
                 if (s.historyLimit) { s.history.push(journal); if (s.history.length > s.historyLimit) s.history.shift(); }
             }
+            if (result.journals.some(j => j.writes.length)) s.memoryRevision++;
+            this.uploadedMemoryRevision = s.memoryRevision;
             s.values.set(result.values); s.ticks += result.executed;
             s.dirty.fill(0); for (const queue of s.queues) queue.length = 0;
             s.firstDirtyLevel = Infinity; s.lastDirtyLevel = -1;
