@@ -1,31 +1,36 @@
-import {assemble} from '../tx2-assembler/index.js';
+import {assemble,encodeBinaryTape} from '../tx2-assembler/index.js';
 import {TX2GateBoard} from './tx2-board.js';
 import {DigitalSimulator,Waveform} from './digital.js';
 import {TimedSimulator} from './timed.js';
 import {ElectricalSimulator} from './electrical.js';
 import {MixedSignalSimulator} from './mixed.js';
 import {GPUClockedSimulator} from './webgpu.js';
-import {ARITY,GATE_NAMES} from './logic.js';
+import {observeBoard} from './observe.js';
+import {ARITY,GATE_NAMES,writeBus} from './logic.js';
 const numeric=(n,low,high,label)=>{if(!Number.isFinite(n)||n<low||n>high)throw new RangeError(`Invalid ${label}`);return n;};
 export const hardwareJSON=value=>JSON.stringify(value,(_key,v)=>typeof v==='bigint'?{$bigint:v.toString()}:ArrayBuffer.isView(v)?Array.from(v):v);
 /** UI-independent session. The worker is a thin transport around this controller.
  * Reload/restore are transactional, and long runs yield to allow pause/disposal. */
 export class HardwareSession {
-    constructor(){this.configuration=null;this.simulator=null;this.gpu=null;this.busy=false;this.cancelled=false;this.samples=[];this.saved=null;this.lastRun=null;}
+    constructor(){this.configuration=null;this.simulator=null;this.gpu=null;this.busy=false;this.cancelled=false;this.samples=[];this.saved=null;this.lastRun=null;this.pendingPen=null;}
     async load(configuration){
         if(this.busy)throw new Error('Pause the current run before loading a circuit');
         const candidate=new HardwareSession();this.busy=true;
         try{await candidate._load(configuration);this.dispose();Object.assign(this,candidate);return this.summary();}
         catch(error){candidate.dispose();throw error;}finally{this.busy=false;}
     }
-    async _load({kind='board',source='',backend='cpu',memory='macro',extended=true,dialect='explicit',delayModel='inertial'}={}){
+    async _load({kind='board',source='',backend='cpu',memory='macro',extended=true,dialect='explicit',delayModel='inertial',inout=false,boot='image',deviceOptions={}}={}){
         if(!['board','netlist','timed','electrical','mixed'].includes(kind)||!['cpu','webgpu'].includes(backend)||!['explicit','m4'].includes(dialect)||
-            typeof source!=='string'||source.length>32*1024*1024||typeof extended!=='boolean')throw new Error('Invalid hardware session configuration');
+            typeof source!=='string'||source.length>32*1024*1024||typeof extended!=='boolean'||typeof inout!=='boolean'||!['image','tape'].includes(boot))throw new Error('Invalid hardware session configuration');
         if(backend==='webgpu'&&!['board','netlist'].includes(kind))throw new Error('WebGPU is for clocked gates; electrical/timed solving uses the CPU');
-        this.configuration={kind,source,backend,memory,extended,dialect,delayModel};this.kind=kind;
+        if(!deviceOptions||typeof deviceOptions!=='object'||Array.isArray(deviceOptions)||
+            Object.keys(deviceOptions).some(k=>!['readerPeriod','rewindPeriod','scopePeriod','punchPeriod','traceDepth'].includes(k))||
+            Object.values(deviceOptions).some(v=>!Number.isSafeInteger(v)||v<1||v>65535))throw new Error('Invalid device options');
+        if(boot==='tape'&&(kind!=='board'||!inout||memory!=='macro'))throw new Error('Tape boot requires INOUT and full-address-space RAM macros');
+        this.configuration={kind,source,backend,memory,extended,dialect,delayModel,inout,boot,deviceOptions:{...deviceOptions}};this.kind=kind;
         if(kind==='board'){
             const image=assemble(source,{dialect});if(image.diagnostics.some(d=>d.severity!=='warning'))throw new Error(image.diagnostics.map(d=>`Line ${d.line}: ${d.message}`).join('\n'));
-            this.board=new TX2GateBoard(image,{memory,depth:memory==='gates'?256:131072,extended});this.simulator=this.board.simulator;
+            this.board=new TX2GateBoard(image,{memory,depth:memory==='gates'?256:131072,extended,inout,bootTape:boot==='tape'?encodeBinaryTape(image):null,deviceOptions});this.simulator=this.board.simulator;
         }else{
             const document=JSON.parse(source);
             this.simulator=kind==='electrical'?new ElectricalSimulator(document):kind==='mixed'?new MixedSignalSimulator(document):
@@ -37,7 +42,7 @@ export class HardwareSession {
         }
         if(backend==='webgpu'){this.gpu=await GPUClockedSimulator.create(this.simulator);await this.gpu.settle();}
         const d=this.digital();
-        if(d){const preferred=['phase','P','N','A','B','E','writeEnable','retired','halt'];
+        if(d){const preferred=inout?['phase','K','P','N','A','E','tapePosition','scopeCount','retired','halt']:['phase','P','N','A','B','E','writeEnable','retired','halt'];
             this.probes=this.kind==='board'?preferred:Object.keys(d.plan.outputs).slice(0,12);
             this.wave=new Waveform(d.plan,this.probes,{limit:4096,tickNs:1});
             this.driver=new Map(d.plan.gates.map(g=>[g.q,{kind:GATE_NAMES[g.op],pins:[g.a,g.b,g.c].slice(0,ARITY[g.op])}]));
@@ -71,9 +76,10 @@ export class HardwareSession {
         const initialRetired=this.kind==='board'?this.simulator.read('retired'):null;
         try{
             if(operation==='operatingPoint'){this.simulator.operatingPoint();executed=1;this.capture();reason='operating point';}
-            else while(executed<(operation==='clock'?1:operation==='instruction'?8198:budget)&&!this.cancelled){
+            else while(executed<(operation==='clock'?1:operation==='instruction'?100000:budget)&&!this.cancelled){
                 if(this.kind==='board'&&this.simulator.read('halt')){reason='board fault';break;}
-                if(this.kind==='board'&&operation==='run'&&breakpoint!==null&&this.simulator.read('phase')===0n&&this.simulator.read('P')===BigInt(breakpoint)){reason='breakpoint';break;}
+                if(this.kind==='board'&&operation==='run'&&breakpoint!==null&&this.simulator.read('phase')===0n&&(this.simulator.read('P')&0o377777n)===BigInt(breakpoint)){reason='breakpoint';break;}
+                this.applyPen();
                 if(this.kind==='timed'){
                     if(this.simulator.time===until){reason='endpoint';break;}
                     this.simulator.runUntil(Math.min(until,this.simulator.time+10));
@@ -84,12 +90,31 @@ export class HardwareSession {
                     this.simulator.step(dt);
                 }else if(this.gpu)await this.gpu.clock();else this.simulator.clock();
                 executed++;this.capture();
-                if(operation==='instruction'&&this.simulator.read('retired')!==initialRetired){reason='instruction';break;}
+                if(operation==='instruction'&&this.simulator.read('retired')!==initialRetired&&(!this.board.board.inout||this.simulator.read('phase')!==3n||this.simulator.read('limbo'))){reason='instruction';break;}
                 if(performance.now()-lastYield>16){onProgress(this.summary());await new Promise(resolve=>setTimeout(resolve,0));lastYield=performance.now();}
             }
+            this.applyPen();
             if(this.cancelled)reason='paused';
+            else if(this.kind==='board'&&this.simulator.read('halt'))reason='board fault';
             this.lastRun={executed,reason,wallMs:performance.now()-start};this.busy=false;return this.summary();
         }finally{this.busy=false;}
+    }
+    /** Coalesced external input. During async GPU evaluation only this pending
+     * record changes; actual wire inputs are applied at the next safe boundary. */
+    pen({x,y,down,radius=8}={}){
+        if(!this.board?.board.inout)throw new Error('Light pen requires an INOUT gate board');
+        if(!Number.isInteger(x)||x < -511||x > 511||!Number.isInteger(y)||y < -511||y > 511||
+            typeof down!=='boolean'||!Number.isInteger(radius)||radius<0||radius>1023)throw new RangeError('Invalid light-pen input');
+        this.pendingPen={x,y,down,radius};if(!this.busy)this.applyPen();
+    }
+    applyPen(){
+        if(!this.pendingPen)return;const p=this.pendingPen;this.pendingPen=null;
+        if(!this.board?.board.inout)return;
+        const s=this.simulator,encode=n=>BigInt(n<0?1023^(-n):n);
+        for(const [name,value]of Object.entries({penX:encode(p.x),penY:encode(p.y),penDown:BigInt(p.down),penRadius:BigInt(p.radius)}))
+            writeBus(s.values,s.plan.inputs[name],value);
+        // External input establishes a new reversal origin, as DigitalSimulator.input does.
+        s.history.length=0;s.settle();
     }
     pause(){this.cancelled=true;}
     back(){if(this.busy)throw new Error('Pause before reversing');if(!this.simulator?.back())throw new Error('No retained reverse step');this.capture();return this.summary();}
@@ -135,8 +160,8 @@ export class HardwareSession {
             statistics:d?.stats?.()??{wires:d?.plan.names.length??0,gates:d?.plan.gates.length??0,events:s.processed??0},
             electrical:e?{iterations:e.iterations,residual:e.residual,solved:e.iterations>0,nodes:e.nodes.length-1,components:e.components.length}:null,
             series:this.samples.slice(-256),signals:wave?.signals.map(p=>({name:p.name,width:p.bus.length})),wave:wave?.samples.slice(-256),
-            checkpoint:!!this.saved,reversible:s.history?.length??0,lastRun:this.lastRun,
+            checkpoint:!!this.saved,reversible:s.history?.length??0,lastRun:this.lastRun,inout:observeBoard(this.board),
             gpu:this.gpu?{evaluations:this.gpu.evaluator.evaluations,dispatches:this.gpu.evaluator.dispatches}:null};
     }
-    dispose(){this.pause();this.gpu?.dispose();this.gpu=null;this.simulator=null;this.board=null;this.wave=null;this.driver=null;this.samples=[];this.saved=null;}
+    dispose(){this.pause();this.gpu?.dispose();this.gpu=null;this.simulator=null;this.board=null;this.wave=null;this.driver=null;this.samples=[];this.saved=null;this.pendingPen=null;}
 }

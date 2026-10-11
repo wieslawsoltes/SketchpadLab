@@ -3,6 +3,10 @@ const session=new HardwareSession();let pending=Promise.resolve(),queued=0;
 self.onmessage=({data})=>{
     if(!data||!Number.isSafeInteger(data.id))return;
     const reply=value=>self.postMessage({id:data.id,...value});
+    if(data.op==='pen'){
+        try{session.pen(data.pen);reply({ok:true,...(!session.busy?{state:session.summary()}: {})});}
+        catch(error){reply({ok:false,error:error.message});}return;
+    }
     if(data.op==='pause'){session.pause();reply({ok:true,state:session.summary()});return;}
     if(++queued>16){queued--;reply({ok:false,error:'Hardware command queue limit exceeded'});return;}
     pending=pending.then(async()=>{
