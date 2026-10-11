@@ -170,6 +170,13 @@ with sync_playwright() as pw:
         page.screenshot(path=str(args.out/f'hardware-example-{index}.png'))
         passed(['NAND latch with propagation delays','delayed ring oscillator','RC transient','nonlinear BJT transient','mixed transistor/digital co-simulation'][index-3])
 
+    page.select_option('#hw-example','11');run('#hw-build')
+    page.fill('#hw-step','0.001');run('#hw-clock')
+    assert page.evaluate('sketchpadHardware.state.time') == 0.001
+    assert abs(page.evaluate('sketchpadHardware.state.series.at(-1).values.out') - 3.160602794) < .003
+    page.screenshot(path=str(args.out/'hardware-adaptive.png'))
+    passed('adaptive RC solver controls internal error while retaining the exact external sample interval')
+
     page.select_option('#hw-example','0');page.select_option('#hw-memory','macro');run('#hw-build')
     page.fill('#hw-breakpoint','100');run('#hw-run')
     assert page.evaluate('sketchpadHardware.state.ticks')==0
