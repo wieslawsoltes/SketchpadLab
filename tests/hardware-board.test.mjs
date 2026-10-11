@@ -2,7 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';
 import {NetlistBuilder} from '../packages/hardware-sim/netlist.js';
 import {DigitalSimulator} from '../packages/hardware-sim/digital.js';
 import {exchangeCircuit,indexedAddressCircuit} from '../packages/hardware-sim/circuits.js';
-import {TX2GateBoard,BOARD_OPERATIONS} from '../packages/hardware-sim/tx2-board.js';
+import {TX2GateBoard,COMPACT_OPERATIONS as BOARD_OPERATIONS} from '../packages/hardware-sim/tx2-board.js';
 import {exchangeLoad,exchangeLoadWithoutSignExtension,exchangeStore} from '../packages/tx2-core/exchange.js';
 import {encodeInstruction,OPCODES} from '../packages/tx2-core/instruction.js';
 import {TX2} from '../packages/tx2-core/cpu.js';

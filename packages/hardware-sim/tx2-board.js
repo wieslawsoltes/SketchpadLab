@@ -3,14 +3,16 @@ import { DigitalSimulator } from './digital.js';
 import { Gate } from './logic.js';
 import { muxWords, exchangeCircuit, arithmeticCircuit, activeMaskCircuit, indexedAddressCircuit, gateRam, FRACTURES } from './circuits.js';
 import { OPCODES } from '../tx2-core/instruction.js';
+import { EXTENDED_OPERATIONS, extendedArithmeticCircuit } from './arithmetic-circuits.js';
 import { STANDARD_CONFIGURATION } from '../tx2-core/standard-config.js';
-export const BOARD_OPERATIONS=Object.freeze(['LDA','LDB','LDC','LDD','LDE','STA','STB','STC','STD','STE','RSX','AUX','DPX','EXX','ADX','SKX',
+export const COMPACT_OPERATIONS=Object.freeze(['LDA','LDB','LDC','LDD','LDE','STA','STB','STC','STD','STE','RSX','AUX','DPX','EXX','ADX','SKX',
     'JMP','JPX','JNX','JPA','JNA','JOV','SPF','SPG','FLF','FLG','ADD','SUB','ITE','ITA','UNA','DSA','SED','EXA','INS','COM','SKM']);
+export const BOARD_OPERATIONS=Object.freeze([...COMPACT_OPERATIONS,...EXTENDED_OPERATIONS]);
 /** A synthesized research board, NOT a transcription of historical circuit cards.
  * Execution has no call to TX2.execute/step or arithmetic interpreter. Instruction
  * decode, fetch/defer/execute sequencing, register writes and ALU are netlist gates.
  * The default RAM macro is an explicit abstraction; optional small RAM uses flops. */
-export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
+export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}={}) {
     if(!['macro','gates'].includes(memory)||!Number.isInteger(depth)||depth<1||depth>131072||(memory==='gates'&&depth>512))throw new Error('Invalid board memory');
     if(!image||image.diagnostics?.some(d=>d.severity!=='warning')||!Array.isArray(image.words)||image.words.length>131072)throw new Error('Invalid assembly image');
     const initial=new Map();const addresses=[0o377604,0o377605,0o377606,0o377607,0o377610];
@@ -27,7 +29,7 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     const Z=b.register('Z',4),halt=b.register('halt',1),retired=b.register('retired',32),deferCount=b.register('deferCount',13),registerMeta=b.register('registerMeta',1);
     const fetch=b.eqConstant(phase.q,0),resolve=b.eqConstant(phase.q,1),execute=b.eqConstant(phase.q,2),running=b.not(halt.q[0]);
     const op=N.q.slice(24,30),config=N.q.slice(30,35),j=N.q.slice(18,24),arg=N.q.slice(0,18);
-    const is=Object.fromEntries(BOARD_OPERATIONS.map(name=>[name,b.eqConstant(op,OPCODES[name])]));
+    const is=Object.fromEntries((extended?BOARD_OPERATIONS:COMPACT_OPERATIONS).map(name=>[name,b.eqConstant(op,OPCODES[name])]));
     const any=(...names)=>b.any(names.map(name=>is[name]));
     const x=muxWords(b,X.map(r=>r.q),j),cf=muxWords(b,F.map(r=>r.q),config);
     const direct=b.or(is.SKX,is.JMP),deferred=b.and(EA.q[17],b.not(direct));
@@ -54,7 +56,8 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     const unsupportedControl=b.any([b.and(is.JMP,b.or(arg[17],config[4])),b.and(is.SKX,b.or(config[3],config[4])),b.and(any('JPX','JNX'),b.not(N.q[35]))]);
     const deferLimit=b.and(resolve,b.and(deferred,b.eqConstant(deferCount.q,4096)));
     const memoryNeeded=b.or(fetch,b.and(b.not(direct),b.or(resolve,execute)));
-    const fault=b.or(b.and(execute,b.or(b.not(validOperation),unsupportedControl)),b.or(deferLimit,b.and(memoryNeeded,b.not(mapped))));
+    const arithmeticFault=b.wire('arithmeticFault');
+    const fault=b.or(arithmeticFault,b.or(b.and(execute,b.or(b.not(validOperation),unsupportedControl)),b.or(deferLimit,b.and(memoryNeeded,b.not(mapped)))));
     const active=b.and(running,b.not(fault)),commit=b.and(execute,active);
     const fetchNow=b.and(fetch,active),resolveNow=b.and(resolve,active);
     const normalResolve=b.and(resolveNow,b.not(deferred)),pointerResolve=b.and(resolveNow,deferred);
@@ -63,6 +66,8 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     const loaded=Object.fromEntries('ABCDE'.split('').map(n=>[n,exchangeCircuit(b,cf,m,old[n])]));
     const mask=activeMaskCircuit(b,cf),maskQuarters=activeMaskCircuit(b,cf,{quartersOnly:true});
     const arithmetic=arithmeticCircuit(b,cf,old.A,align,old.C,old.D,loaded.D,Z.q,is.SUB);
+    const extra=extended?extendedArithmeticCircuit(b,cf,old,align,loaded.D,Z.q,is):null;
+    b.drive(arithmeticFault,Gate.BUF,extra?b.and(execute,extra.fault):b.zero);
     const positive=bus=>b.and(b.not(bus.at(-1)),b.any(bus)),negative=bus=>b.and(bus.at(-1),b.not(b.all(bus))),isZero=bus=>b.or(b.not(b.any(bus)),b.all(bus));
     const nextX=Object.fromEntries(['RSX','EXX'].map(n=>[n,exchangeCircuit(b,cf,m,[...x,...zero18]).slice(0,18)]));
     const xSum=b.onesAdd(x,align.slice(0,18)).sum,xExtended=[...x,...Array(18).fill(x[17])];
@@ -117,6 +122,7 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     for(const n of 'ABCDE')nextRegs[n]=b.select(old[n],loaded[n],is['LD'+n]);
     nextRegs.A=b.select(nextRegs.A,loaded.A,b.and(is.EXA,b.not(registerSelect[0])));
     for(const n of ['A','C','D'])nextRegs[n]=b.select(nextRegs[n],arithmetic[n],any('ADD','SUB'));
+    if(extra)for(const n of 'ABCD')nextRegs[n]=b.select(nextRegs[n],extra[n],extra.enabled);
     const logicResult=old.A.map((pin,i)=>b.mux(pin,b.or(b.and(is.ITA,b.and(pin,align[i])),b.or(b.and(is.UNA,b.or(pin,align[i])),b.and(is.DSA,b.xor(pin,align[i])))),mask[i]));
     nextRegs.A=b.select(nextRegs.A,logicResult,any('ITA','UNA','DSA'));
     nextRegs.C=b.select(nextRegs.C,old.C.map((pin,i)=>b.or(pin,b.all([old.A[i],align[i],mask[i]]))),is.DSA);
@@ -124,7 +130,7 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     // Memory-mapped register writes precede the instruction's E-register effects.
     for(let i=0;i<5;i++){const n='ABCDE'[i];nextRegs[n]=b.select(nextRegs[n],store,b.and(writes,registerSelect[i]));}
     const rawToE=any('LDA','LDB','LDC','LDD','RSX','AUX','SPF','SPG','ADD','SUB','ITA','UNA','DSA');
-    nextRegs.E=b.select(nextRegs.E,m,rawToE);
+    nextRegs.E=b.select(nextRegs.E,m,extra?b.or(rawToE,extra.enabled):rawToE);
     nextRegs.E=b.select(nextRegs.E,store,b.and(writes,b.not(b.or(is.STE,is.SKM))));
     nextRegs.E=b.select(nextRegs.E,old.E.map((pin,i)=>b.mux(pin,b.and(pin,alignNoSign[i]),maskQuarters[i])),is.ITE);
     nextRegs.E=b.select(nextRegs.E,conditionalReturn,b.and(takeJump,b.not(is.JMP)));
@@ -140,7 +146,7 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
             value=b.select(value,m.slice(q*9,q*9+9),selected);enable=b.or(enable,selected);
         }F[i].connect(value,b.and(commit,enable));
     }
-    Z.connect(arithmetic.Z,b.and(commit,any('ADD','SUB')));
+    Z.connect(extra?b.select(arithmetic.Z,extra.Z,extra.enabled):arithmetic.Z,b.and(commit,extra?b.or(any('ADD','SUB'),extra.enabled):any('ADD','SUB')));
     const nextP=[...b.add(P.q.slice(0,17),b.constant(1,17)).sum,P.q[17]];
     const target=[...EA.q.slice(0,17),P.q[17]],jumpP=b.select(nextP,target,takeJump);
     P.connect(b.select(b.select(P.q,nextP,fetch),b.select(P.q,jumpP,b.or(takeJump,skip)),execute),active);
@@ -155,7 +161,7 @@ export function buildTX2Board(image,{memory='macro',depth=131072}={}) {
     for(const [name,r]of Object.entries({P,N,Q,EA,phase,halt,retired,Z,...regs}))b.output(name,r.q);
     for(let i=0;i<64;i++)b.output(`X${i}`,X[i].q);for(let i=0;i<32;i++)b.output(`F${i}`,F[i].q);
     b.output('memoryAddress',memAddress);b.output('memoryData',m);b.output('writeData',store);b.output('writeEnable',[writing]);b.output('fault',[fault]);
-    b.output('faultCode',[b.not(validOperation),unsupportedControl,b.not(mapped),deferLimit]);
+    b.output('faultCode',[b.not(validOperation),unsupportedControl,b.not(mapped),deferLimit,arithmeticFault]);
     return {plan:b.compile(),memory,depth,initial};
 }
 export class TX2GateBoard {
