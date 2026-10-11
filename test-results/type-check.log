@@ -1,4 +1,0 @@
-
-> sketchpad-lab@0.3.0 test:types
-> tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext tests/api-types.ts
-

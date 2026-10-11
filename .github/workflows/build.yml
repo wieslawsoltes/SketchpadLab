@@ -9,23 +9,40 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned test tooling
+        run: |
+          npm install --global --ignore-scripts typescript@5.9.3
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          echo "CHROMIUM_EXECUTABLE=$(python -c 'from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()')" >> "$GITHUB_ENV"
       - run: npm run check
       - run: npm test
+      - run: npm run test:types
       - run: npm run build
       - name: Include the standalone app and notices
         run: cp Sketchpad-Lab.html LICENSE THIRD_PARTY_NOTICES.md dist/
       - run: npm run package:toolchain
+      - run: npm run test:package
+      - run: npm run package:hardware
+      - run: npm run test:hardware-package
       - name: Archive the exact tested source
         run: |
           git archive --format=zip --output=artifacts/sketchpad-lab-source.zip HEAD
           git rev-parse HEAD > artifacts/source-commit.txt
           sha256sum artifacts/sketchpad-lab-source.zip > artifacts/source-SHA256SUMS.txt
+      - run: npm run test:browser
+      - run: npm run test:hardware-browser -- --gpu
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: sketchpad-lab
           path: |
@@ -34,6 +51,7 @@ jobs:
             artifacts/*.zip
             artifacts/*.txt
             Sketchpad-Lab.html
+            test-results
       - name: Configure GitHub Pages
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/configure-pages@v5

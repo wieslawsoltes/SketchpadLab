@@ -1,141 +1,90 @@
-# Sketchpad Lab 0.3.0
+# Sketchpad Lab 0.4.0
 
-A working browser reconstruction of Sketchpad's drawing workflows and physical TX-2 console, alongside a standalone native-M4 restoration assembler, instruction-level emulator, peripheral research model, and reversible debugger.
+A browser reconstruction of Ivan Sutherland's Sketchpad workflows and the TX-2 console, with a native-M4 restoration assembler, instruction emulator, reversible debugger, and an **optional independent gate/electrical hardware laboratory**.
 
-**Not a 100% clone, not a dimensionally exact console, and not an emulator successfully running unmodified original Sketchpad.** The default drawing application is newly written JavaScript. The machine diagnostics are separately assembled and executed; no CPU opcode secretly calls the host drawing engine. See [the compatibility ledger](docs/COMPATIBILITY.md).
+**The complete, unmodified original Sketchpad program does not yet boot.** The drawing application is newly written JavaScript; the gate board is synthesized research hardware rather than a transcription of the original TX-2 circuit cards. See [compatibility](docs/COMPATIBILITY.md) and [hardware fidelity](docs/HARDWARE.md).
 
-## Open it
+## Run
 
-**[Launch Sketchpad Lab on GitHub Pages](https://wieslawsoltes.github.io/SketchpadLab/).**
-The site is rebuilt and deployed automatically after the checks pass on `main`.
-The [standalone HTML](https://wieslawsoltes.github.io/SketchpadLab/Sketchpad-Lab.html) is also available to save for offline use.
+[Launch the application](https://wieslawsoltes.github.io/SketchpadLab/) or [download the generated standalone HTML](https://wieslawsoltes.github.io/SketchpadLab/Sketchpad-Lab.html). GitHub Pages is rebuilt after the checks pass on `main`.
 
-Open **`Sketchpad-Lab.html`** in a normal browser tab. It is self-contained: styles, 34 JavaScript modules, and a Worker bootstrap; no CDN, package install, account, API key, or server. The browser must allow JavaScript, Blob URLs and Workers. Embedded previews may restrict these.
-
-WebGPU is attempted, with Canvas 2D fallback. This build's browser tests exercised Canvas 2D; hardware WebGPU execution is not certified.
-
-For development, use Node.js 22 or later:
+From source, Node.js 22 or later is sufficient; there are no runtime package dependencies:
 
 ```sh
 npm run dev
 # http://localhost:4173/apps/studio/index.html
+npm run build
+# Generates dist/ and Sketchpad-Lab.html for offline use.
+```
+
+The generated HTML embeds the styles, module graph and worker bootstraps without a CDN. The browser must allow JavaScript, Blob URLs and workers. WebGPU requires a supported browser/context; the drawing renderer has a Canvas fallback. Hardware computation uses CPU gates by default and never silently substitutes them for a failed selected GPU backend.
+
+Build outputs belong in CI artifacts and are regenerated from source, rather than serving stale checked-in copies.
+
+## Hardware laboratory
+
+Click **Hardware**, choose a model, and click **Enable & build**. Merely opening the panel does not allocate a hardware worker; the original drawing and instruction workspaces remain intact.
+
+The laboratory includes four-state clocked gates, delayed inertial/transport gates, a 48-opcode research board, bounded gate-built RAM, an RLC/diode/BJT transient solver and explicit digital/analog coupling. Run/step/reverse, breakpoints, waveforms, source editing, actual driver-cone inspection, portable snapshots and VCD/wiring export are available. Closing pauses the laboratory; Power off releases its worker and storage.
+
+The extended board currently contains **214,395 Boolean gates and 1,736 flip-flops**, plus explicit RAM macros by default. The 256-word gate-RAM option uses flip-flops and multiplexers for its data and metadata. These are synthesized implementation counts, not historical TX-2 component counts.
+
+The board executes its own gate connectivity, not the instruction emulator. It does not yet implement the full TX-2 sequence, INOUT, TRAP, tape-boot or peripheral circuitry. Generic electrical models do not establish a transistor-accurate original machine. Read [the model contracts, SDK examples and validation requirements](docs/HARDWARE.md).
+
+## Drawing, assembly and instruction research
+
+The drawing reconstruction supports lines/circles/arcs, shared points, snapping, constraints, live master instances, attachers, definition copying/dismembering, vector text/scalars, undo/redo, JSON persistence and modern SVG/HP-GL export. The console includes 37 controls, 288 toggles, encoders, register lamps and an optional console-only view. Its appearance is evidence-guided, not a certified dimensionally exact replica.
+
+The separate instruction workbench provides exact 36-bit words, one's-complement arithmetic, the bounded explicit/native-M4 assemblers, memory/configuration handling, breakpoints, watchpoints, snapshots and reversal. Its INOUT research profile executes the published plugboard/reader leader to load generated binary tapes and includes scope, light-pen, paper-tape and TRAP research models. These capabilities are not automatically capabilities of the new gate board.
+
+## Reusable packages
+
+```sh
+npm run package:toolchain
+npm run package:hardware
+```
+
+The resulting self-contained tarballs are `artifacts/sketchpad-lab-tx2-toolchain-0.4.0.tgz` and `artifacts/sketchpad-lab-hardware-sim-0.4.0.tgz`. Both include notices and strict TypeScript declarations. No registry publication is implied by creating a tarball.
+
+```js
+import {TX2GateBoard} from '@sketchpad-lab/hardware-sim';
+import {assemble} from '@sketchpad-lab/hardware-sim/assembler';
+
+const image = assemble('.org 100\nLDA 200\n.org 200\n.word 0d1963');
+if (image.diagnostics.length) throw new Error(JSON.stringify(image.diagnostics));
+const board = new TX2GateBoard(image);
+board.stepInstruction();
+console.log(board.state().A); // 1963n, from gate execution
+```
+
+The combined toolchain exposes hardware through `@sketchpad-lab/tx2-toolchain/hardware`. Its default/core API remains the separate instruction-level implementation.
+
+## Quality checks
+
+```sh
 npm run check
 npm test
-npm run test:types       # requires an installed TypeScript compiler
-npm run build           # static dist/ plus self-contained HTML
-npm run test:browser     # requires installed Python Playwright and Chromium
+npm run test:types
+npm run build
+npm run test:browser
+npm run test:hardware-browser -- --gpu
 npm run package:toolchain
-npm run test:package     # validates the installed tarball, not workspace links
+npm run test:package
+npm run package:hardware
+npm run test:hardware-package
 ```
 
-No runtime dependencies need installing. Optional test tools are never downloaded implicitly.
+Type checks require TypeScript; browser checks require Python Playwright and Chromium. CI installs these test tools, exercises both workspaces and isolated package installations, and archives the exact tested source plus generated distributions. Hardware GPU checks report adapter availability explicitly; `python tests/hardware_browser.py --gpu --require-gpu` makes lack of execution a failure.
 
-## Physical console
+The Node suite contains **298 passing regression tests** at this release, plus **33 original-workspace and 17 hardware-browser workflows**. Counts are regression coverage, not proof of full historical compatibility. See [0.4.0 release notes](docs/RELEASE-0.4.0.md); GPU environment results are recorded in the CI hardware report.
 
-The default UI replaces the modern drawing dashboard with a gray cabinet, rectangular black CRT faceplate and curved inner tube, monochrome spot display, 37-button box, four shaft encoders, eight editable 36-bit toggle registers, and live K/P/Q/N/FA/F/X/A–E/Z indicators and 33 sequence flags. The modern drawing workbench is a collapsed drawer. Controls are DOM components wired to application and input-register state, not painted hotspots.
+## Original sources and attribution
 
-Move the pointer onto the CRT and press **D / DRAW**. Move to the endpoint and press **Enter / STOP**. For an arc: **C / CEN CIR** at the center, move to the starting point and press DRAW, then move around the center and STOP. **T** starts moving text; type and STOP. **N** starts a scalar number. **HOLD** ignores one pen flick; the pen icon performs the flick. A live gesture is one undoable document edit.
-
-Open **Drawing workbench** for modern two-click line/circle tools, selections, constraints, master-picture management and inspectors. Keyboard commands intentionally differ between the physical console and the open workbench; see [Controls](docs/CONTROLS.md).
-
-The button bit assignments follow the thesis. Physical key order, exact panel dimensions, typography, cabinet arrangement and some legends are inferred. This is a reference-based reconstruction, not a verified pixel-identical facsimile.
-
-## New in 0.3.0
-
-**Real bootstrap execution:** the 32-word published plugboard initializes F memory and loads the 20-word standard reader leader through PETR. The reader then loads newly assembled program blocks, checks their one’s-complement checksums, disconnects the tape and reaches the entry point. No host-side user-RAM preload or special “boot” opcode is used. The bundled small diagnostic reaches its entry after 649 executed instructions. The complete original Sketchpad program remains unbooted.
-
-**Compiler:** binary tape encoding/decoding and CLI export; native PUNCH/PUN entry handling; bracketed deferred operands no longer discarded as comments; lossless source views with UTF-16 offsets; nested archival-annotation recognition; aggregate include budgets and cyclic-include diagnostics.
-
-**Simulator:** reversible TRAP 42 instruction/defer/operand marking and detection, marked sequence interlock, marked P placekeepers, between-step priority preemption and corrected non-INOUT TSD channels. PETR now has a free-running transport clock, overrun detection and logical rewind/motor modes.
-
-**Visuals:** photo P91-211-inspired rectangular faceplate, numbered strip, blanking panels, four encoders, separate button box and register rack; functioning focus/intensity/afterglow; shared two-Gaussian beam formula; console-only view and in-app fidelity record. Exact cabinet dimensions and beam photometry are not established. See [Visual fidelity](docs/VISUAL-FIDELITY.md).
-
-## Retained from 0.2.0
-
-* **Geometry:** 28 constraint types; scalar quantities and vector-stroked numeric readouts; live instance attachers and similarity-transform variables; designated-point definition copying; master-to-dependent propagation; constraint-preserving dismembering; connected-path planning and modern HP-GL export.
-* **Machine:** 48 opcode handlers, up from 23; fractured arithmetic, carry/overflow state, signed double-word multiply/divide, shift/cycle/normalize, exchange and logic families. Unsupported configurations still fault atomically.
-* **Native M4:** DEF/EMD macros, compound-symbol macros, native origins and tags, literal pools, pipe-index constructs, script syllables, all 16 comma transforms, left-to-right expressions, implicit allocations, source maps and diagnostics. It is a restoration subset, not complete original M4.
-* **INOUT research profile:** priority sequence switching, dismiss/retry and timed handshakes; scope 60, light pen 55, paper-tape reader 52 and punch 63. Six-bit splay/unsplay is implemented. Instruction duration is a deliberately synthetic 5 microseconds; no cycle-accuracy claim.
-
-The initial host drawing has a newly authored repeated-hexagon picture with live masters; other pictures contain linkage and bridge examples. They are not original saved Sketchpad media.
-
-## Assembly and debugger
-
-Choose **M4 native macros** to assemble a native-syntax diagnostic, or **TX-2 scope** to exercise sequence switching and individual CRT spots. These examples automatically select the appropriate machine profile. The older **Vector diagnostic** retains its explicitly nonhistorical word-coordinate endpoint.
-
-Step, bounded Run, Pause, Reverse, breakpoints, memory watchpoints, octal register/memory editing, trace, image export and snapshots work independently of the host drawing. Reverse restores registers, journaled memory, peripheral buffers, output events and virtual time. STOP labels in examples are debugger breakpoints, not invented halt instructions.
-
-## Standalone toolchain
-
-The packer produces `artifacts/sketchpad-lab-tx2-toolchain-0.3.0.tgz`. This self-contained ESM package has TypeScript declarations, an assembler CLI and no runtime dependencies. It is a local artifact, not an npm-registry publication.
+`sk.tx2as` and `sk2.tx2as` are not bundled or relicensed. Archive import/fetch preserves source bytes and verifies pinned identity/length; a matching hash does not prove historical correctness. The alternate listing is not asserted to be the latest working release.
 
 ```sh
-npm install ./sketchpad-lab-tx2-toolchain-0.3.0.tgz
-```
-
-```js
-import { assembleM4, TX2 } from '@sketchpad-lab/tx2-toolchain';
-
-const image = assembleM4(`
-☛☛DEF MOVE|A→B
-hLDE A
-STE B
-☛☛EMD
-100|
-START→ MOVE|{123456}→ANSWER
-STOP→ JMP STOP
-☛☛GOTO START
-`);
-if (image.diagnostics.length) throw new Error(JSON.stringify(image.diagnostics));
-const machine = new TX2();
-machine.load(image);
-machine.breakpoints.add(Number(image.symbols.get('STOP')));
-console.log(machine.run({ budget: 100 })); // 2 instructions, breakpoint
-console.log(machine.getRegister('E'));    // 42798n (octal 123456)
-machine.back();                         // Revert STE and its memory write
-```
-
-Instantiate `new TX2({profile:'tx2-io-research'})` for the optional INOUT model. Unsupported peripheral units/modes are errors, not successful no-ops.
-
-## Boot a newly assembled diagnostic from tape
-
-In **Assembly**, choose a diagnostic, press **Boot tape**, then **Run**. The machine stops first at the plugboard; Run executes the loader and stops at the user-entry breakpoint. **Punch tape** downloads the binary tape, not JSON. RESET reboots the same mounted tape.
-
-```js
-import { assembleM4, encodeBinaryTape, TX2 } from '@sketchpad-lab/tx2-toolchain';
-const image = assembleM4(`
-100|
-START→ LDA 200
-STOP→ JMP STOP
-200|
-123
-☛☛PUNCH START
-`, { autoAssign: false });
-if (image.diagnostics.length) throw new Error(JSON.stringify(image.diagnostics));
-const tape = encodeBinaryTape(image);
-const machine = new TX2({ profile: 'tx2-io-research' });
-machine.bootTape(tape);              // RAM is clear; P = 377750 octal
-machine.breakpoints.add(image.entry);
-console.log(machine.run({ budget: 5000 })); // 649 instructions; breakpoint
-machine.step();                     // Execute the tape-loaded LDA
-console.log(machine.getRegister('A')); // 83n (123 octal)
-```
-
-The binary file uses six low-data-bit frames per word, with an optional high file marker. Logical beginning-of-file substitutes for the physical END MARK. See [Tape format and limits](docs/TAPE.md).
-
-## Archive and provenance
-
-Original `sk.tx2as` and `sk2.tx2as` bytes are **not bundled or relicensed**. Archive import/fetch preserves bytes and verifies pinned Git blob identity and length. A matching hash proves retrieval, not historical correctness or successful execution. `sk2` is an alternate listing, not asserted to be a later working release.
-
-```sh
-npm run originals:fetch   # explicit network operation
+npm run originals:fetch
 npm run originals:verify
 ```
 
-Fetching never substitutes synthetic sources on failure. The complete original listings have not been assembled, linked and booted in this build.
-
-## Verification and documentation
-
-**247 regression tests; 33 browser workflows; strict TypeScript consumer compilation.** See [Validation](docs/VALIDATION.md) for exact scope and exclusions.
-
-[Release notes](docs/RELEASE-0.3.0.md) · [Binary tape](docs/TAPE.md) · [Visual fidelity](docs/VISUAL-FIDELITY.md) · [Compatibility](docs/COMPATIBILITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Assembler](docs/ASSEMBLER.md) · [Controls](docs/CONTROLS.md) · [Sources](docs/SOURCES.md) · [Attribution](THIRD_PARTY_NOTICES.md)
+[Hardware](docs/HARDWARE.md) · [Compatibility](docs/COMPATIBILITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Assembler](docs/ASSEMBLER.md) · [Tape bootstrap](docs/TAPE.md) · [Controls](docs/CONTROLS.md) · [Visual fidelity](docs/VISUAL-FIDELITY.md) · [Sources](docs/SOURCES.md) · [Attribution](THIRD_PARTY_NOTICES.md)
