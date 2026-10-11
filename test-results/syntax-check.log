@@ -1,0 +1,5 @@
+
+> sketchpad-lab@0.3.0 check
+> node tools/check.mjs
+
+Syntax checked 56 JavaScript modules.

@@ -1,0 +1,59 @@
+
+> sketchpad-lab@0.3.0 package:toolchain
+> node tools/package-toolchain.mjs
+
+npm notice
+npm notice package: @sketchpad-lab/tx2-toolchain@0.3.0
+npm notice Tarball Contents
+npm notice 1.3kB LICENSE
+npm notice 845B README.md
+npm notice 3.8kB THIRD_PARTY_NOTICES.md
+npm notice 2.2kB bin/assemble.mjs
+npm notice 9.5kB docs/ARCHITECTURE.md
+npm notice 6.9kB docs/ASSEMBLER.md
+npm notice 11.0kB docs/COMPATIBILITY.md
+npm notice 5.4kB docs/CONTROLS.md
+npm notice 2.3kB docs/RELEASE-0.2.0.md
+npm notice 3.3kB docs/RELEASE-0.3.0.md
+npm notice 6.1kB docs/SOURCES.md
+npm notice 6.3kB docs/TAPE.md
+npm notice 4.1kB docs/VALIDATION.md
+npm notice 4.5kB docs/VISUAL-FIDELITY.md
+npm notice 79B index.d.ts
+npm notice 79B index.js
+npm notice 814B package.json
+npm notice 4.7kB tx2-assembler/expression.js
+npm notice 3.6kB tx2-assembler/index.d.ts
+npm notice 17.0kB tx2-assembler/index.js
+npm notice 30.9kB tx2-assembler/m4.js
+npm notice 180B tx2-assembler/package.json
+npm notice 895B tx2-assembler/provenance.d.ts
+npm notice 3.1kB tx2-assembler/provenance.js
+npm notice 3.1kB tx2-assembler/source.js
+npm notice 5.2kB tx2-assembler/tape.js
+npm notice 8.5kB tx2-core/alu.js
+npm notice 1.6kB tx2-core/boot.js
+npm notice 33.9kB tx2-core/cpu.js
+npm notice 3.6kB tx2-core/devices.js
+npm notice 3.5kB tx2-core/exchange.js
+npm notice 15.8kB tx2-core/index.d.ts
+npm notice 331B tx2-core/index.js
+npm notice 4.8kB tx2-core/instruction.js
+npm notice 4.6kB tx2-core/memory.js
+npm notice 270B tx2-core/package.json
+npm notice 11.7kB tx2-core/peripherals.js
+npm notice 515B tx2-core/standard-config.js
+npm notice 3.0kB tx2-core/trap.js
+npm notice 4.9kB tx2-core/word.js
+npm notice Tarball Details
+npm notice name: @sketchpad-lab/tx2-toolchain
+npm notice version: 0.3.0
+npm notice filename: sketchpad-lab-tx2-toolchain-0.3.0.tgz
+npm notice package size: 72.2 kB
+npm notice unpacked size: 234.4 kB
+npm notice shasum: a577b512afe29bad0df29bbb154c705f8ff52402
+npm notice integrity: sha512-xZRTaEoO+u+uZ[...]eEh8rRj4ZXi0A==
+npm notice total files: 40
+npm notice
+sketchpad-lab-tx2-toolchain-0.3.0.tgz
+Standalone toolchain tarball created in artifacts/.

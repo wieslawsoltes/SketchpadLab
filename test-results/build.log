@@ -1,0 +1,6 @@
+
+> sketchpad-lab@0.3.0 build
+> node tools/build.mjs
+
+Static distribution built in dist/
+Standalone /mnt/data/work/sketchpad-lab/Sketchpad-Lab.html: 34 modules, 414,069 bytes. No external runtime dependencies.

@@ -1,0 +1,10 @@
+{
+  "name": "@sketchpad-lab/tx2-core",
+  "version": "0.3.0",
+  "type": "module",
+  "exports": "./index.js",
+  "types": "./index.d.ts",
+  "license": "MIT",
+  "description": "Deterministic 36-bit TX-2 research emulator, peripherals, reverse debugger",
+  "private": true
+}

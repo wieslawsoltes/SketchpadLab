@@ -1,0 +1,9 @@
+node_modules/
+dist/
+artifacts/
+Sketchpad-Lab.html
+originals/*.tx2as
+originals/*.tmp
+originals/verification-report.json
+test-results/
+__pycache__/

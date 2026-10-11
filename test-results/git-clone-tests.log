@@ -1,0 +1,1496 @@
+
+> sketchpad-lab@0.3.0 test
+> node --test tests/*.test.mjs
+
+TAP version 13
+# Subtest: ITA implements its full-word boolean function
+ok 1 - ITA implements its full-word boolean function
+  ---
+  duration_ms: 11.724367
+  type: 'test'
+  ...
+# Subtest: UNA implements its full-word boolean function
+ok 2 - UNA implements its full-word boolean function
+  ---
+  duration_ms: 1.786063
+  type: 'test'
+  ...
+# Subtest: DSA implements its full-word boolean function
+ok 3 - DSA implements its full-word boolean function
+  ---
+  duration_ms: 1.573663
+  type: 'test'
+  ...
+# Subtest: EXA exchanges A and memory simultaneously
+ok 4 - EXA exchanges A and memory simultaneously
+  ---
+  duration_ms: 1.395275
+  type: 'test'
+  ...
+# Subtest: EXX exchanges Xj and memory without indexing by Xj
+ok 5 - EXX exchanges Xj and memory without indexing by Xj
+  ---
+  duration_ms: 1.18497
+  type: 'test'
+  ...
+# Subtest: ADX deposits sum without changing its index register
+ok 6 - ADX deposits sum without changing its index register
+  ---
+  duration_ms: 1.087434
+  type: 'test'
+  ...
+# Subtest: INS uses B as a bit mask
+ok 7 - INS uses B as a bit mask
+  ---
+  duration_ms: 1.003147
+  type: 'test'
+  ...
+# Subtest: COM complements the whole active word and stores it
+ok 8 - COM complements the whole active word and stores it
+  ---
+  duration_ms: 0.874113
+  type: 'test'
+  ...
+# Subtest: ITE computes the active-quarter intersection in E
+ok 9 - ITE computes the active-quarter intersection in E
+  ---
+  duration_ms: 1.306742
+  type: 'test'
+  ...
+# Subtest: DPX destination is not indexed by the source X register
+ok 10 - DPX destination is not indexed by the source X register
+  ---
+  duration_ms: 1.328335
+  type: 'test'
+  ...
+# Subtest: FLF preserves the other three destination quarters
+ok 11 - FLF preserves the other three destination quarters
+  ---
+  duration_ms: 1.086562
+  type: 'test'
+  ...
+# Subtest: FLG deposits four consecutive configuration slots
+ok 12 - FLG deposits four consecutive configuration slots
+  ---
+  duration_ms: 0.822115
+  type: 'test'
+  ...
+# Subtest: CYA cycles by the signed sign-quarter count
+ok 13 - CYA cycles by the signed sign-quarter count
+  ---
+  duration_ms: 1.361925
+  type: 'test'
+  ...
+# Subtest: CYB cycles by the signed sign-quarter count
+ok 14 - CYB cycles by the signed sign-quarter count
+  ---
+  duration_ms: 1.21172
+  type: 'test'
+  ...
+# Subtest: CAB cycles by the signed sign-quarter count
+ok 15 - CAB cycles by the signed sign-quarter count
+  ---
+  duration_ms: 0.816516
+  type: 'test'
+  ...
+# Subtest: SCA scales without moving the sign bit
+ok 16 - SCA scales without moving the sign bit
+  ---
+  duration_ms: 1.590148
+  type: 'test'
+  ...
+# Subtest: SCB scales without moving the sign bit
+ok 17 - SCB scales without moving the sign bit
+  ---
+  duration_ms: 1.067954
+  type: 'test'
+  ...
+# Subtest: SAB scales without moving the sign bit
+ok 18 - SAB scales without moving the sign bit
+  ---
+  duration_ms: 0.751538
+  type: 'test'
+  ...
+# Subtest: MUL and DIV round-trip signed AB products across 400 nonzero divisors
+ok 19 - MUL and DIV round-trip signed AB products across 400 nonzero divisors
+  ---
+  duration_ms: 14.689079
+  type: 'test'
+  ...
+# Subtest: MUL preserves negative zero and duplicates the product sign
+ok 20 - MUL preserves negative zero and duplicates the product sign
+  ---
+  duration_ms: 0.207291
+  type: 'test'
+  ...
+# Subtest: TLY counts the sign bit and adds into the original D sign quarter
+ok 21 - TLY counts the sign bit and adds into the original D sign quarter
+  ---
+  duration_ms: 0.727032
+  type: 'test'
+  ...
+# Subtest: NOA normalizes an integer one to the top non-sign bit
+ok 22 - NOA normalizes an integer one to the top non-sign bit
+  ---
+  duration_ms: 0.600552
+  type: 'test'
+  ...
+# Subtest: JPA 5 tests sign excluding both zeros
+ok 23 - JPA 5 tests sign excluding both zeros
+  ---
+  duration_ms: 0.926181
+  type: 'test'
+  ...
+# Subtest: JPA 777777777777 tests sign excluding both zeros
+ok 24 - JPA 777777777777 tests sign excluding both zeros
+  ---
+  duration_ms: 0.568974
+  type: 'test'
+  ...
+# Subtest: JNA 777777777772 tests sign excluding both zeros
+ok 25 - JNA 777777777772 tests sign excluding both zeros
+  ---
+  duration_ms: 0.502134
+  type: 'test'
+  ...
+# Subtest: JNA 777777777777 tests sign excluding both zeros
+ok 26 - JNA 777777777777 tests sign excluding both zeros
+  ---
+  duration_ms: 0.546941
+  type: 'test'
+  ...
+# Subtest: JOV observes the relevant sign-quarter overflow indicator
+ok 27 - JOV observes the relevant sign-quarter overflow indicator
+  ---
+  duration_ms: 0.534643
+  type: 'test'
+  ...
+# Subtest: DIV by zero and coupled 27/9 products fault atomically
+ok 28 - DIV by zero and coupled 27/9 products fault atomically
+  ---
+  duration_ms: 1.025641
+  type: 'test'
+  ...
+# Subtest: console encoders use physical quarter numbers 1–4 and bounded event history
+ok 29 - console encoders use physical quarter numbers 1–4 and bounded event history
+  ---
+  duration_ms: 1.243697
+  type: 'test'
+  ...
+# Subtest: expression precedence, radix and current address
+ok 30 - expression precedence, radix and current address
+  ---
+  duration_ms: 3.18336
+  type: 'test'
+  ...
+# Subtest: expression parser rejects executable JavaScript and excessive shifts
+ok 31 - expression parser rejects executable JavaScript and excessive shifts
+  ---
+  duration_ms: 0.570277
+  type: 'test'
+  ...
+# Subtest: forward labels and chained equalities resolve
+ok 32 - forward labels and chained equalities resolve
+  ---
+  duration_ms: 5.683345
+  type: 'test'
+  ...
+# Subtest: example assembles: Accumulator
+ok 33 - example assembles: Accumulator
+  ---
+  duration_ms: 1.416847
+  type: 'test'
+  ...
+# Subtest: example assembles: Index loop
+ok 34 - example assembles: Index loop
+  ---
+  duration_ms: 0.79275
+  type: 'test'
+  ...
+# Subtest: example assembles: Exchange quarters
+ok 35 - example assembles: Exchange quarters
+  ---
+  duration_ms: 0.317567
+  type: 'test'
+  ...
+# Subtest: example assembles: Vector diagnostic
+ok 36 - example assembles: Vector diagnostic
+  ---
+  duration_ms: 0.598339
+  type: 'test'
+  ...
+# Subtest: example assembles: Macro assembly
+ok 37 - example assembles: Macro assembly
+  ---
+  duration_ms: 0.490617
+  type: 'test'
+  ...
+# Subtest: example assembles: M4 native macros
+ok 38 - example assembles: M4 native macros
+  ---
+  duration_ms: 8.327956
+  type: 'test'
+  ...
+# Subtest: example assembles: TX-2 scope
+ok 39 - example assembles: TX-2 scope
+  ---
+  duration_ms: 2.457801
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: unknown
+ok 40 - assembler fails closed: unknown
+  ---
+  duration_ms: 0.481323
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: undefined
+ok 41 - assembler fails closed: undefined
+  ---
+  duration_ms: 0.33322
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: duplicate
+ok 42 - assembler fails closed: duplicate
+  ---
+  duration_ms: 0.212118
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: cycle
+ok 43 - assembler fails closed: cycle
+  ---
+  duration_ms: 0.274122
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: overlap
+ok 44 - assembler fails closed: overlap
+  ---
+  duration_ms: 0.23306
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: overflow
+ok 45 - assembler fails closed: overflow
+  ---
+  duration_ms: 0.166109
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: m4
+ok 46 - assembler fails closed: m4
+  ---
+  duration_ms: 0.354813
+  type: 'test'
+  ...
+# Subtest: assembler fails closed: glyph
+ok 47 - assembler fails closed: glyph
+  ---
+  duration_ms: 0.19344
+  type: 'test'
+  ...
+# Subtest: macro local labels are unique between expansions
+ok 48 - macro local labels are unique between expansions
+  ---
+  duration_ms: 0.201363
+  type: 'test'
+  ...
+# Subtest: include resolution is explicit and cyclic includes are rejected
+ok 49 - include resolution is explicit and cyclic includes are rejected
+  ---
+  duration_ms: 0.158618
+  type: 'test'
+  ...
+# Subtest: expansion limits stop recursive macros
+ok 50 - expansion limits stop recursive macros
+  ---
+  duration_ms: 0.14033
+  type: 'test'
+  ...
+# Subtest: source normalization is a separate view
+ok 51 - source normalization is a separate view
+  ---
+  duration_ms: 0.274151
+  type: 'test'
+  ...
+# Subtest: image JSON round trip retains exact words and source locations
+ok 52 - image JSON round trip retains exact words and source locations
+  ---
+  duration_ms: 0.838118
+  type: 'test'
+  ...
+# Subtest: malformed image entries and duplicate addresses are rejected
+ok 53 - malformed image entries and duplicate addresses are rejected
+  ---
+  duration_ms: 0.137427
+  type: 'test'
+  ...
+# Subtest: pinned source verification uses Git blob framing, not text normalization
+ok 54 - pinned source verification uses Git blob framing, not text normalization
+  ---
+  duration_ms: 12.628896
+  type: 'test'
+  ...
+# Subtest: archive auditor exposes repeated archival equalities and metadata
+ok 55 - archive auditor exposes repeated archival equalities and metadata
+  ---
+  duration_ms: 0.627052
+  type: 'test'
+  ...
+# Subtest: accumulator executes exactly three instructions to breakpoint
+ok 56 - accumulator executes exactly three instructions to breakpoint
+  ---
+  duration_ms: 3.40934
+  type: 'test'
+  ...
+# Subtest: JPX tests old index, increments with signed CF, and loops correctly
+ok 57 - JPX tests old index, increments with signed CF, and loops correctly
+  ---
+  duration_ms: 2.457291
+  type: 'test'
+  ...
+# Subtest: reverse execution restores the entire memory/register state
+ok 58 - reverse execution restores the entire memory/register state
+  ---
+  duration_ms: 1.965692
+  type: 'test'
+  ...
+# Subtest: unsupported instruction leaves machine state and history unchanged
+ok 59 - unsupported instruction leaves machine state and history unchanged
+  ---
+  duration_ms: 1.789157
+  type: 'test'
+  ...
+# Subtest: deferred operand resolves chained indexed pointer words before instruction index
+ok 60 - deferred operand resolves chained indexed pointer words before instruction index
+  ---
+  duration_ms: 0.710927
+  type: 'test'
+  ...
+# Subtest: deferred cycle is detected with atomic rollback, not a fake NOP
+ok 61 - deferred cycle is detected with atomic rollback, not a fake NOP
+  ---
+  duration_ms: 1.457259
+  type: 'test'
+  ...
+# Subtest: deferred JMP stays explicitly unsupported
+ok 62 - deferred JMP stays explicitly unsupported
+  ---
+  duration_ms: 0.521514
+  type: 'test'
+  ...
+# Subtest: read and write watchpoints stop after a committed instruction
+ok 63 - read and write watchpoints stop after a committed instruction
+  ---
+  duration_ms: 0.797067
+  type: 'test'
+  ...
+# Subtest: X0 is invariant under SKX and index arithmetic
+ok 64 - X0 is invariant under SKX and index arithmetic
+  ---
+  duration_ms: 0.5861
+  type: 'test'
+  ...
+# Subtest: SKM toggles a data bit and reverse restores it
+ok 65 - SKM toggles a data bit and reverse restores it
+  ---
+  duration_ms: 1.657079
+  type: 'test'
+  ...
+# Subtest: unconditional SKU skips even with a nonexistent bit selector
+ok 66 - unconditional SKU skips even with a nonexistent bit selector
+  ---
+  duration_ms: 0.974834
+  type: 'test'
+  ...
+# Subtest: A-E share the M metabit
+ok 67 - A-E share the M metabit
+  ---
+  duration_ms: 0.181082
+  type: 'test'
+  ...
+# Subtest: unmapped memory faults; V-memory writes are inhibited
+ok 68 - unmapped memory faults; V-memory writes are inhibited
+  ---
+  duration_ms: 0.336525
+  type: 'test'
+  ...
+# Subtest: parity faults are detected rather than silently corrected
+ok 69 - parity faults are detected rather than silently corrected
+  ---
+  duration_ms: 0.477847
+  type: 'test'
+  ...
+# Subtest: memory journal captures first-write values and restores metadata
+ok 70 - memory journal captures first-write values and restores metadata
+  ---
+  duration_ms: 0.138448
+  type: 'test'
+  ...
+# Subtest: diagnostic I/O is an explicit profile, with reversible device output
+ok 71 - diagnostic I/O is an explicit profile, with reversible device output
+  ---
+  duration_ms: 1.750949
+  type: 'test'
+  ...
+# Subtest: raw WordTape is reversible independently of historical peripherals
+ok 72 - raw WordTape is reversible independently of historical peripherals
+  ---
+  duration_ms: 0.149535
+  type: 'test'
+  ...
+# Subtest: snapshots reject incompatible machine profiles and invalid planes
+ok 73 - snapshots reject incompatible machine profiles and invalid planes
+  ---
+  duration_ms: 0.746902
+  type: 'test'
+  ...
+# Subtest: history is bounded; instruction budgets are enforced
+ok 74 - history is bounded; instruction budgets are enforced
+  ---
+  duration_ms: 0.660602
+  type: 'test'
+  ...
+# Subtest: SED compares exchanged active quarters without modifying E
+ok 75 - SED compares exchanged active quarters without modifying E
+  ---
+  duration_ms: 0.73942
+  type: 'test'
+  ...
+# Subtest: SPG cannot overwrite configuration zero
+ok 76 - SPG cannot overwrite configuration zero
+  ---
+  duration_ms: 0.515945
+  type: 'test'
+  ...
+# Subtest: JMP preserves the last operand address in Q
+ok 77 - JMP preserves the last operand address in Q
+  ---
+  duration_ms: 0.652389
+  type: 'test'
+  ...
+# Subtest: invalid image load is rejected before memory mutation
+ok 78 - invalid image load is rejected before memory mutation
+  ---
+  duration_ms: 12.274203
+  type: 'test'
+  ...
+# Subtest: beam profile has finite positive peak and decays monotonically with radial distance
+ok 79 - beam profile has finite positive peak and decays monotonically with radial distance
+  ---
+  duration_ms: 0.884258
+  type: 'test'
+  ...
+# Subtest: beam intensity is linear and zero intensity emits no light
+ok 80 - beam intensity is linear and zero intensity emits no light
+  ---
+  duration_ms: 0.173961
+  type: 'test'
+  ...
+# Subtest: focus widens the beam without changing its on-axis energy
+ok 81 - focus widens the beam without changing its on-axis energy
+  ---
+  duration_ms: 0.135834
+  type: 'test'
+  ...
+# Subtest: DPR scaling preserves radial profile when the minimum variance floor is inactive
+ok 82 - DPR scaling preserves radial profile when the minimum variance floor is inactive
+  ---
+  duration_ms: 0.127581
+  type: 'test'
+  ...
+# Subtest: invalid optical parameters fail rather than producing NaN draw data
+ok 83 - invalid optical parameters fail rather than producing NaN draw data
+  ---
+  duration_ms: 0.460031
+  type: 'test'
+  ...
+# Subtest: all sixteen M4 comma-chart cells match the handbook chart
+ok 84 - all sixteen M4 comma-chart cells match the handbook chart
+  ---
+  duration_ms: 6.392659
+  type: 'test'
+  ...
+# Subtest: M4 operators evaluate left-to-right, not JavaScript precedence
+ok 85 - M4 operators evaluate left-to-right, not JavaScript precedence
+  ---
+  duration_ms: 2.47734
+  type: 'test'
+  ...
+# Subtest: M4 marked decimal integers and exact fixed-point fractions
+ok 86 - M4 marked decimal integers and exact fixed-point fractions
+  ---
+  duration_ms: 1.11855
+  type: 'test'
+  ...
+# Subtest: M4 field fragments OR full words, scripts can occur after the opcode
+ok 87 - M4 field fragments OR full words, scripts can occur after the opcode
+  ---
+  duration_ms: 1.261494
+  type: 'test'
+  ...
+# Subtest: M4 multiple comma fragments reproduce original packed-quarter idiom
+ok 88 - M4 multiple comma fragments reproduce original packed-quarter idiom
+  ---
+  duration_ms: 0.218998
+  type: 'test'
+  ...
+# Subtest: normalizer preserves Greek and elevated letter-parameter groups
+ok 89 - normalizer preserves Greek and elevated letter-parameter groups
+  ---
+  duration_ms: 0.23286
+  type: 'test'
+  ...
+# Subtest: M4 origin, RC pooling and undefined address allocation produce runnable code
+ok 90 - M4 origin, RC pooling and undefined address allocation produce runnable code
+  ---
+  duration_ms: 18.122886
+  type: 'test'
+  ...
+# Subtest: M4 default origin is T-memory 200000
+ok 91 - M4 default origin is T-memory 200000
+  ---
+  duration_ms: 0.3595
+  type: 'test'
+  ...
+# Subtest: M4 direct alias in operand is OR-combined rather than truncated to address
+ok 92 - M4 direct alias in operand is OR-combined rather than truncated to address
+  ---
+  duration_ms: 0.970377
+  type: 'test'
+  ...
+# Subtest: M4 pipe construct emits deferred RC pointer with its own index
+ok 93 - M4 pipe construct emits deferred RC pointer with its own index
+  ---
+  duration_ms: 5.14757
+  type: 'test'
+  ...
+# Subtest: M4 named macro preserves caller provenance and emits literal pool
+ok 94 - M4 named macro preserves caller provenance and emits literal pool
+  ---
+  duration_ms: 2.751852
+  type: 'test'
+  ...
+# Subtest: M4 local tags are hygienic across macro expansions
+ok 95 - M4 local tags are hygienic across macro expansions
+  ---
+  duration_ms: 4.513158
+  type: 'test'
+  ...
+# Subtest: omitted M4 arguments suppress direct uses; equality indirection supplies zero
+ok 96 - omitted M4 arguments suppress direct uses; equality indirection supplies zero
+  ---
+  duration_ms: 1.842197
+  type: 'test'
+  ...
+# Subtest: nested M4 macros used inside multiword RC blocks
+ok 97 - nested M4 macros used inside multiword RC blocks
+  ---
+  duration_ms: 4.842683
+  type: 'test'
+  ...
+# Subtest: M4 nested macro arguments expand recursively at the call location
+ok 98 - M4 nested macro arguments expand recursively at the call location
+  ---
+  duration_ms: 0.676626
+  type: 'test'
+  ...
+# Subtest: M4 compound macro supports arguments before its symbol
+ok 99 - M4 compound macro supports arguments before its symbol
+  ---
+  duration_ms: 0.524427
+  type: 'test'
+  ...
+# Subtest: M4 \# in literal words refers to the allocated RC address
+ok 100 - M4 \# in literal words refers to the allocated RC address
+  ---
+  duration_ms: 0.332058
+  type: 'test'
+  ...
+# Subtest: M4 equality expressions remain lazy at their usage locations
+ok 101 - M4 equality expressions remain lazy at their usage locations
+  ---
+  duration_ms: 0.396445
+  type: 'test'
+  ...
+# Subtest: M4 repeated equalities use last definition; duplicate program blocks fail closed
+ok 102 - M4 repeated equalities use last definition; duplicate program blocks fail closed
+  ---
+  duration_ms: 0.567302
+  type: 'test'
+  ...
+# Subtest: M4 unverified zero division cannot silently manufacture historical code
+ok 103 - M4 unverified zero division cannot silently manufacture historical code
+  ---
+  duration_ms: 0.201683
+  type: 'test'
+  ...
+# Subtest: M4 interactive editing commands and unknown glyphs fail explicitly
+ok 104 - M4 interactive editing commands and unknown glyphs fail explicitly
+  ---
+  duration_ms: 1.372772
+  type: 'test'
+  ...
+# Subtest: M4 depth/expansion limits stop recursive macros
+ok 105 - M4 depth/expansion limits stop recursive macros
+  ---
+  duration_ms: 0.318538
+  type: 'test'
+  ...
+# Subtest: M4 auto-dispatch leaves the explicit dialect backward compatible
+ok 106 - M4 auto-dispatch leaves the explicit dialect backward compatible
+  ---
+  duration_ms: 4.955602
+  type: 'test'
+  ...
+# Subtest: all 36 bit positions round-trip through authentic assembly-mode splay
+ok 107 - all 36 bit positions round-trip through authentic assembly-mode splay
+  ---
+  duration_ms: 2.000173
+  type: 'test'
+  ...
+# Subtest: scope decodes separate ten-bit ones-complement axes and dwell intensity
+ok 108 - scope decodes separate ten-bit ones-complement axes and dwell intensity
+  ---
+  duration_ms: 0.387282
+  type: 'test'
+  ...
+# Subtest: light pen triggers on illumination, not merely moving its coordinates
+ok 109 - light pen triggers on illumination, not merely moving its coordinates
+  ---
+  duration_ms: 0.248643
+  type: 'test'
+  ...
+# Subtest: scope beam pulses raise the connected light-pen sequence
+ok 110 - scope beam pulses raise the connected light-pen sequence
+  ---
+  duration_ms: 0.272369
+  type: 'test'
+  ...
+# Subtest: scope reverse snapshots retain the prior immutable spot history
+ok 111 - scope reverse snapshots retain the prior immutable spot history
+  ---
+  duration_ms: 0.26662
+  type: 'test'
+  ...
+# Subtest: PETR waits for a frame and assembles six splayed frames into an unmodified word
+ok 112 - PETR waits for a frame and assembles six splayed frames into an unmodified word
+  ---
+  duration_ms: 0.303646
+  type: 'test'
+  ...
+# Subtest: paper tape punch assembly output is inverse of the reader splay operation
+ok 113 - paper tape punch assembly output is inverse of the reader splay operation
+  ---
+  duration_ms: 0.892461
+  type: 'test'
+  ...
+# Subtest: unsupported tape seventh-channel control modes fault explicitly
+ok 114 - unsupported tape seventh-channel control modes fault explicitly
+  ---
+  duration_ms: 0.39976
+  type: 'test'
+  ...
+# Subtest: M4 RXF and JPD start a scope sequence using its X placekeeper
+ok 115 - M4 RXF and JPD start a scope sequence using its X placekeeper
+  ---
+  duration_ms: 9.277623
+  type: 'test'
+  ...
+# Subtest: held TSD still dismisses and retries when its buffer is busy
+ok 116 - held TSD still dismisses and retries when its buffer is busy
+  ---
+  duration_ms: 2.566264
+  type: 'test'
+  ...
+# Subtest: IOS report captures status BEFORE disconnecting the device
+ok 117 - IOS report captures status BEFORE disconnecting the device
+  ---
+  duration_ms: 1.496888
+  type: 'test'
+  ...
+# Subtest: same-sequence raise cancels dismissal without changing P to Xj
+ok 118 - same-sequence raise cancels dismissal without changing P to Xj
+  ---
+  duration_ms: 1.129897
+  type: 'test'
+  ...
+# Subtest: marked placekeeper is loaded when TRAP sequence mode is disabled
+ok 119 - marked placekeeper is loaded when TRAP sequence mode is disabled
+  ---
+  duration_ms: 1.025931
+  type: 'test'
+  ...
+# Subtest: reversing INOUT restores scheduler time, flags, scope output and memory
+ok 120 - reversing INOUT restores scheduler time, flags, scope output and memory
+  ---
+  duration_ms: 3.347587
+  type: 'test'
+  ...
+# Subtest: empty INOUT wait stops at LIMBO rather than spinning a fabricated event
+ok 121 - empty INOUT wait stops at LIMBO rather than spinning a fabricated event
+  ---
+  duration_ms: 0.781304
+  type: 'test'
+  ...
+# Subtest: external high-priority flag preempts before an unheld next fetch and reverses atomically
+ok 122 - external high-priority flag preempts before an unheld next fetch and reverses atomically
+  ---
+  duration_ms: 15.009921
+  type: 'test'
+  ...
+# Subtest: external flags cannot preempt the instruction following HOLD
+ok 123 - external flags cannot preempt the instruction following HOLD
+  ---
+  duration_ms: 2.622829
+  type: 'test'
+  ...
+# Subtest: non-INOUT TSD in sequence 0 cycles without requiring a peripheral
+ok 124 - non-INOUT TSD in sequence 0 cycles without requiring a peripheral
+  ---
+  duration_ms: 1.363988
+  type: 'test'
+  ...
+# Subtest: non-INOUT TSD in sequence 75 cycles without requiring a peripheral
+ok 125 - non-INOUT TSD in sequence 75 cycles without requiring a peripheral
+  ---
+  duration_ms: 1.159992
+  type: 'test'
+  ...
+# Subtest: non-INOUT TSD in sequence 76 cycles without requiring a peripheral
+ok 126 - non-INOUT TSD in sequence 76 cycles without requiring a peripheral
+  ---
+  duration_ms: 1.343217
+  type: 'test'
+  ...
+# Subtest: sequence 77 is not silently treated as a non-INOUT TSD channel
+ok 127 - sequence 77 is not silently treated as a non-INOUT TSD channel
+  ---
+  duration_ms: 1.066291
+  type: 'test'
+  ...
+# Subtest: Run honors a breakpoint at the asynchronously selected sequence before executing it
+ok 128 - Run honors a breakpoint at the asynchronously selected sequence before executing it
+  ---
+  duration_ms: 1.840334
+  type: 'test'
+  ...
+# Subtest: repeated stationary breakpoint checks do not append no-op history entries
+ok 129 - repeated stationary breakpoint checks do not append no-op history entries
+  ---
+  duration_ms: 1.03233
+  type: 'test'
+  ...
+# Subtest: a device wakeup into a breakpoint records time and flag changes without an instruction
+ok 130 - a device wakeup into a breakpoint records time and flag changes without an instruction
+  ---
+  duration_ms: 1.136537
+  type: 'test'
+  ...
+# Subtest: live master attachers become solver-coupled host points
+ok 131 - live master attachers become solver-coupled host points
+  ---
+  duration_ms: 3.288809
+  type: 'test'
+  ...
+# Subtest: instance pins move attachers and connected wire endpoints together
+ok 132 - instance pins move attachers and connected wire endpoints together
+  ---
+  duration_ms: 2.704352
+  type: 'test'
+  ...
+# Subtest: two fixed host attachers solve the four similarity transform variables
+ok 133 - two fixed host attachers solve the four similarity transform variables
+  ---
+  duration_ms: 0.796726
+  type: 'test'
+  ...
+# Subtest: editing a master updates attached host points, not only rendering
+ok 134 - editing a master updates attached host points, not only rendering
+  ---
+  duration_ms: 0.648834
+  type: 'test'
+  ...
+# Subtest: dismember preserves attachment identity and rotates horizontal constraints
+ok 135 - dismember preserves attachment identity and rotates horizontal constraints
+  ---
+  duration_ms: 0.559029
+  type: 'test'
+  ...
+# Subtest: dismember rejects a non-similarity transform rather than corrupting constraints
+ok 136 - dismember rejects a non-similarity transform rather than corrupting constraints
+  ---
+  duration_ms: 0.365559
+  type: 'test'
+  ...
+# Subtest: copy definition aligns designated target points and retains constraints
+ok 137 - copy definition aligns designated target points and retains constraints
+  ---
+  duration_ms: 0.937598
+  type: 'test'
+  ...
+# Subtest: changing an instance preserves its host attacher points
+ok 138 - changing an instance preserves its host attacher points
+  ---
+  duration_ms: 1.536718
+  type: 'test'
+  ...
+# Subtest: scalar length measurement updates formatted number strokes
+ok 139 - scalar length measurement updates formatted number strokes
+  ---
+  duration_ms: 0.880863
+  type: 'test'
+  ...
+# Subtest: scalar fixed target drives line length geometrically
+ok 140 - scalar fixed target drives line length geometrically
+  ---
+  duration_ms: 0.461072
+  type: 'test'
+  ...
+# Subtest: scalar ratio and difference constraints solve together
+ok 141 - scalar ratio and difference constraints solve together
+  ---
+  duration_ms: 0.255885
+  type: 'test'
+  ...
+# Subtest: drawing persistence round-trips scalars, numeric entities and instance constraints
+ok 142 - drawing persistence round-trips scalars, numeric entities and instance constraints
+  ---
+  duration_ms: 0.73929
+  type: 'test'
+  ...
+# Subtest: pen DRAW anchors then follows the pen as one undoable transaction
+ok 143 - pen DRAW anchors then follows the pen as one undoable transaction
+  ---
+  duration_ms: 0.798159
+  type: 'test'
+  ...
+# Subtest: CENCIR plus DRAW creates a moving arc with constant radius
+ok 144 - CENCIR plus DRAW creates a moving arc with constant radius
+  ---
+  duration_ms: 0.300381
+  type: 'test'
+  ...
+# Subtest: HOLD consumes precisely one flick without stopping an active gesture
+ok 145 - HOLD consumes precisely one flick without stopping an active gesture
+  ---
+  duration_ms: 0.164076
+  type: 'test'
+  ...
+# Subtest: dangerous buttons require META and undo restores deleted content
+ok 146 - dangerous buttons require META and undo restores deleted content
+  ---
+  duration_ms: 0.60552
+  type: 'test'
+  ...
+# Subtest: moving text receives typed characters and numbers receive scalar input
+ok 147 - moving text receives typed characters and numbers receive scalar input
+  ---
+  duration_ms: 0.402875
+  type: 'test'
+  ...
+# Subtest: stroke lettering respects full rotation and preserves line geometry
+ok 148 - stroke lettering respects full rotation and preserves line geometry
+  ---
+  duration_ms: 0.32007
+  type: 'test'
+  ...
+# Subtest: number fields report overflow with asterisks rather than truncating values
+ok 149 - number fields report overflow with asterisks rather than truncating values
+  ---
+  duration_ms: 0.08631
+  type: 'test'
+  ...
+# Subtest: SVG exports the same vector lettering rather than substituting a browser font
+ok 150 - SVG exports the same vector lettering rather than substituting a browser font
+  ---
+  duration_ms: 0.602084
+  type: 'test'
+  ...
+# Subtest: plot planner groups shared endpoints and emits explicitly modern HP-GL
+ok 151 - plot planner groups shared endpoints and emits explicitly modern HP-GL
+  ---
+  duration_ms: 0.579681
+  type: 'test'
+  ...
+# Subtest: phosphor clips distant geometry before sampling and caps retained spots
+ok 152 - phosphor clips distant geometry before sampling and caps retained spots
+  ---
+  duration_ms: 0.625719
+  type: 'test'
+  ...
+# Subtest: phosphor fades unrefreshed spots and clears on time reversal
+ok 153 - phosphor fades unrefreshed spots and clears on time reversal
+  ---
+  duration_ms: 0.204296
+  type: 'test'
+  ...
+# Subtest: scaled dismember preserves scalar values and scales measurement equations
+ok 154 - scaled dismember preserves scalar values and scales measurement equations
+  ---
+  duration_ms: 0.430567
+  type: 'test'
+  ...
+# Subtest: master creation preserves numeric displays and owned scalar constraints
+ok 155 - master creation preserves numeric displays and owned scalar constraints
+  ---
+  duration_ms: 0.454613
+  type: 'test'
+  ...
+# Subtest: intrusive rings grow and retain next/previous invariants
+ok 156 - intrusive rings grow and retain next/previous invariants
+  ---
+  duration_ms: 3.170702
+  type: 'test'
+  ...
+# Subtest: ring ownership and stale handles are rejected
+ok 157 - ring ownership and stale handles are rejected
+  ---
+  duration_ms: 0.370526
+  type: 'test'
+  ...
+# Subtest: default demonstration validates and has zero residual
+ok 158 - default demonstration validates and has zero residual
+  ---
+  duration_ms: 5.728303
+  type: 'test'
+  ...
+# Subtest: horizontal + distance constraint produces the exact target geometry
+ok 159 - horizontal + distance constraint produces the exact target geometry
+  ---
+  duration_ms: 1.287894
+  type: 'test'
+  ...
+# Subtest: vertical constraint operates on shared point coordinates
+ok 160 - vertical constraint operates on shared point coordinates
+  ---
+  duration_ms: 0.229845
+  type: 'test'
+  ...
+# Subtest: inconsistent fixed endpoints report residual rather than moving fixed geometry
+ok 161 - inconsistent fixed endpoints report residual rather than moving fixed geometry
+  ---
+  duration_ms: 0.154803
+  type: 'test'
+  ...
+# Subtest: drag pins are eliminated from the variable system
+ok 162 - drag pins are eliminated from the variable system
+  ---
+  duration_ms: 0.237366
+  type: 'test'
+  ...
+# Subtest: solver options and nonfinite pins are rejected
+ok 163 - solver options and nonfinite pins are rejected
+  ---
+  duration_ms: 0.237707
+  type: 'test'
+  ...
+# Subtest: parallel constraint converges to zero cross product
+ok 164 - parallel constraint converges to zero cross product
+  ---
+  duration_ms: 0.504517
+  type: 'test'
+  ...
+# Subtest: equal-length constraint copies a fixed source length
+ok 165 - equal-length constraint copies a fixed source length
+  ---
+  duration_ms: 0.498228
+  type: 'test'
+  ...
+# Subtest: midpoint constraint places a point on the midpoint of a fixed line
+ok 166 - midpoint constraint places a point on the midpoint of a fixed line
+  ---
+  duration_ms: 0.257307
+  type: 'test'
+  ...
+# Subtest: circle radius and point-on-circle constraints converge together
+ok 167 - circle radius and point-on-circle constraints converge together
+  ---
+  duration_ms: 0.377557
+  type: 'test'
+  ...
+# Subtest: arc formation enforces a common center-to-end radius
+ok 168 - arc formation enforces a common center-to-end radius
+  ---
+  duration_ms: 0.217046
+  type: 'test'
+  ...
+# Subtest: point merge rewires all incident geometry without duplicate coordinates
+ok 169 - point merge rewires all incident geometry without duplicate coordinates
+  ---
+  duration_ms: 0.211147
+  type: 'test'
+  ...
+# Subtest: atomic edits rollback invalid constraints
+ok 170 - atomic edits rollback invalid constraints
+  ---
+  duration_ms: 0.600702
+  type: 'test'
+  ...
+# Subtest: undo and redo restore entity graph and IDs
+ok 171 - undo and redo restore entity graph and IDs
+  ---
+  duration_ms: 0.377257
+  type: 'test'
+  ...
+# Subtest: deleting a shared point removes referencing geometry and constraints
+ok 172 - deleting a shared point removes referencing geometry and constraints
+  ---
+  duration_ms: 0.21335
+  type: 'test'
+  ...
+# Subtest: unused attacher points survive garbage collection
+ok 173 - unused attacher points survive garbage collection
+  ---
+  duration_ms: 0.096585
+  type: 'test'
+  ...
+# Subtest: live instances reflect changes in master coordinates
+ok 174 - live instances reflect changes in master coordinates
+  ---
+  duration_ms: 0.854083
+  type: 'test'
+  ...
+# Subtest: recursive picture instancing is rejected
+ok 175 - recursive picture instancing is rejected
+  ---
+  duration_ms: 0.125348
+  type: 'test'
+  ...
+# Subtest: master creation copies only constraints within the selected subgraph
+ok 176 - master creation copies only constraints within the selected subgraph
+  ---
+  duration_ms: 0.176265
+  type: 'test'
+  ...
+# Subtest: exploding a translated instance produces transformed geometry
+ok 177 - exploding a translated instance produces transformed geometry
+  ---
+  duration_ms: 0.356796
+  type: 'test'
+  ...
+# Subtest: drawing import rejects malformed ownership and rolls back
+ok 178 - drawing import rejects malformed ownership and rolls back
+  ---
+  duration_ms: 2.745864
+  type: 'test'
+  ...
+# Subtest: drawing import rejects invalid numeric constraint target
+ok 179 - drawing import rejects invalid numeric constraint target
+  ---
+  duration_ms: 0.239279
+  type: 'test'
+  ...
+# Subtest: SVG output renders authored text as safe strokes
+ok 180 - SVG output renders authored text as safe strokes
+  ---
+  duration_ms: 1.121434
+  type: 'test'
+  ...
+# Subtest: hit testing prioritizes exact shared points over line segments
+ok 181 - hit testing prioritizes exact shared points over line segments
+  ---
+  duration_ms: 0.268173
+  type: 'test'
+  ...
+# Subtest: camera zoom keeps the pointed world coordinate stationary
+ok 182 - camera zoom keeps the pointed world coordinate stationary
+  ---
+  duration_ms: 0.160481
+  type: 'test'
+  ...
+# Subtest: affine multiplication matches sequential point transformations
+ok 183 - affine multiplication matches sequential point transformations
+  ---
+  duration_ms: 0.398819
+  type: 'test'
+  ...
+# Subtest: lossless parsing view retains offsets, CRLF and original annotation bytes
+ok 184 - lossless parsing view retains offsets, CRLF and original annotation bytes
+  ---
+  duration_ms: 1.751119
+  type: 'test'
+  ...
+# Subtest: multiline and nested editorial annotations are isolated from bracket operands
+ok 185 - multiline and nested editorial annotations are isolated from bracket operands
+  ---
+  duration_ms: 6.103025
+  type: 'test'
+  ...
+# Subtest: unterminated archival note reports real file and line and emits no image
+ok 186 - unterminated archival note reports real file and line and emits no image
+  ---
+  duration_ms: 0.380542
+  type: 'test'
+  ...
+# Subtest: explicit bracketed deferred address is not silently erased to address zero
+ok 187 - explicit bracketed deferred address is not silently erased to address zero
+  ---
+  duration_ms: 8.324857
+  type: 'test'
+  ...
+# Subtest: native bracket defer composes with index syllables and rejects overflow
+ok 188 - native bracket defer composes with index syllables and rejects overflow
+  ---
+  duration_ms: 1.138349
+  type: 'test'
+  ...
+# Subtest: unrecognized bracket prose cannot disappear from a successful assembly
+ok 189 - unrecognized bracket prose cannot disappear from a successful assembly
+  ---
+  duration_ms: 0.908905
+  type: 'test'
+  ...
+# Subtest: include byte budgets apply in aggregate to both assemblers
+ok 190 - include byte budgets apply in aggregate to both assemblers
+  ---
+  duration_ms: 0.644789
+  type: 'test'
+  ...
+# Subtest: self-includes fail without rescanning the same file
+ok 191 - self-includes fail without rescanning the same file
+  ---
+  duration_ms: 0.272289
+  type: 'test'
+  ...
+# Subtest: semicolon inside a quoted include name remains part of the name
+ok 192 - semicolon inside a quoted include name remains part of the name
+  ---
+  duration_ms: 0.503456
+  type: 'test'
+  ...
+# Subtest: PUNCH resolves a forward symbolic start and rejects undefined start with strict symbols
+ok 193 - PUNCH resolves a forward symbolic start and rejects undefined start with strict symbols
+  ---
+  duration_ms: 1.371199
+  type: 'test'
+  ...
+# Subtest: all 32 plugboard words mapped read-only with correct first and final program words
+ok 194 - all 32 plugboard words mapped read-only with correct first and final program words
+  ---
+  duration_ms: 1.330147
+  type: 'test'
+  ...
+# Subtest: cold boot executes SPG to initialize all 32 F slots rather than seeding them
+ok 195 - cold boot executes SPG to initialize all 32 F slots rather than seeding them
+  ---
+  duration_ms: 8.798944
+  type: 'test'
+  ...
+# Subtest: published plugboard reads all 20 original reader-leader words from 120 frames
+ok 196 - published plugboard reads all 20 original reader-leader words from 120 frames
+  ---
+  duration_ms: 12.205459
+  type: 'test'
+  ...
+# Subtest: unmodified numeric reader leader loads discontiguous blocks, disconnects PETR and calls entry
+ok 197 - unmodified numeric reader leader loads discontiguous blocks, disconnects PETR and calls entry
+  ---
+  duration_ms: 15.334188
+  type: 'test'
+  ...
+# Subtest: native PUNCH entry survives compiler to tape to actual bootstrap execution
+ok 198 - native PUNCH entry survives compiler to tape to actual bootstrap execution
+  ---
+  duration_ms: 19.821467
+  type: 'test'
+  ...
+# Subtest: complete loader run is reversible, including tape transport and metadata
+ok 199 - complete loader run is reversible, including tape transport and metadata
+  ---
+  duration_ms: 16.279658
+  type: 'test'
+  ...
+# Subtest: mid-boot snapshot deterministically resumes across independent machines
+ok 200 - mid-boot snapshot deterministically resumes across independent machines
+  ---
+  duration_ms: 25.021547
+  type: 'test'
+  ...
+# Subtest: tape parser validates all block checksums and frame boundaries
+ok 201 - tape parser validates all block checksums and frame boundaries
+  ---
+  duration_ms: 1.566031
+  type: 'test'
+  ...
+# Subtest: all binary-file marker conventions carry identical 36-bit tape words
+ok 202 - all binary-file marker conventions carry identical 36-bit tape words
+  ---
+  duration_ms: 1.177258
+  type: 'test'
+  ...
+# Subtest: invalid, failed, overlapping, loader-clobbering and non-entry images cannot be punched
+ok 203 - invalid, failed, overlapping, loader-clobbering and non-entry images cannot be punched
+  ---
+  duration_ms: 0.783456
+  type: 'test'
+  ...
+# Subtest: PETR transport clock does not drift with CPU consumption time and records overrun
+ok 204 - PETR transport clock does not drift with CPU consumption time and records overrun
+  ---
+  duration_ms: 0.237767
+  type: 'test'
+  ...
+# Subtest: rewinding a mounted stream reverses at logical BOT without inventing data
+ok 205 - rewinding a mounted stream reverses at logical BOT without inventing data
+  ---
+  duration_ms: 0.236165
+  type: 'test'
+  ...
+# Subtest: tape boot requires INOUT and validates input before resetting
+ok 206 - tape boot requires INOUT and validates input before resetting
+  ---
+  duration_ms: 1.068505
+  type: 'test'
+  ...
+# Subtest: executed reader leader rejects a corrupted payload checksum before entering user code
+ok 207 - executed reader leader rejects a corrupted payload checksum before entering user code
+  ---
+  duration_ms: 10.872558
+  type: 'test'
+  ...
+# Subtest: TRAP execute: mode decoding and old-metabit observation
+ok 208 - TRAP execute: mode decoding and old-metabit observation
+  ---
+  duration_ms: 1.295566
+  type: 'test'
+  ...
+# Subtest: TRAP defer: mode decoding and old-metabit observation
+ok 209 - TRAP defer: mode decoding and old-metabit observation
+  ---
+  duration_ms: 0.175754
+  type: 'test'
+  ...
+# Subtest: TRAP operand: mode decoding and old-metabit observation
+ok 210 - TRAP operand: mode decoding and old-metabit observation
+  ---
+  duration_ms: 0.135874
+  type: 'test'
+  ...
+# Subtest: TRAP rejects reserved mode bits without changing the active circuit
+ok 211 - TRAP rejects reserved mode bits without changing the active circuit
+  ---
+  duration_ms: 0.264618
+  type: 'test'
+  ...
+# Subtest: instruction/operand automatic marking is reversible and does not trap on freshly marked data
+ok 212 - instruction/operand automatic marking is reversible and does not trap on freshly marked data
+  ---
+  duration_ms: 8.858944
+  type: 'test'
+  ...
+# Subtest: marked operand raises TRAP, switches to its handler and reports the prior sequence
+ok 213 - marked operand raises TRAP, switches to its handler and reports the prior sequence
+  ---
+  duration_ms: 1.442767
+  type: 'test'
+  ...
+# Subtest: instruction trap respects HOLD until an unheld instruction completes
+ok 214 - instruction trap respects HOLD until an unheld instruction completes
+  ---
+  duration_ms: 1.28534
+  type: 'test'
+  ...
+# Subtest: deferred-address trap marks only deferred words when requested
+ok 215 - deferred-address trap marks only deferred words when requested
+  ---
+  duration_ms: 1.116026
+  type: 'test'
+  ...
+# Subtest: TRAP mutations roll back with a failed instruction
+ok 216 - TRAP mutations roll back with a failed instruction
+  ---
+  duration_ms: 1.892232
+  type: 'test'
+  ...
+# Subtest: debugger reads and writes do not trigger instruction traps
+ok 217 - debugger reads and writes do not trigger instruction traps
+  ---
+  duration_ms: 0.936086
+  type: 'test'
+  ...
+# Subtest: SKM tests pre-reference metabit, not the automatic mark it just applied
+ok 218 - SKM tests pre-reference metabit, not the automatic mark it just applied
+  ---
+  duration_ms: 2.068607
+  type: 'test'
+  ...
+# Subtest: marked placekeeper is valid without a sequence trap mode
+ok 219 - marked placekeeper is valid without a sequence trap mode
+  ---
+  duration_ms: 0.843948
+  type: 'test'
+  ...
+# Subtest: marked sequence change redirects to 42 with the intended target in E
+ok 220 - marked sequence change redirects to 42 with the intended target in E
+  ---
+  duration_ms: 1.441064
+  type: 'test'
+  ...
+# Subtest: sequence trap does not intercept 0, 40, 41, 42 or return from 42
+ok 221 - sequence trap does not intercept 0, 40, 41, 42 or return from 42
+  ---
+  duration_ms: 0.162174
+  type: 'test'
+  ...
+# Subtest: P mark survives increment, skip, indexed jump and wrap-around
+ok 222 - P mark survives increment, skip, indexed jump and wrap-around
+  ---
+  duration_ms: 0.989716
+  type: 'test'
+  ...
+# Subtest: TRAP TSD performs its cycle-and-dismiss behavior without a fabricated buffer
+ok 223 - TRAP TSD performs its cycle-and-dismiss behavior without a fabricated buffer
+  ---
+  duration_ms: 1.463197
+  type: 'test'
+  ...
+# Subtest: IOS reports TRAP mode before replacement; disconnect preserves mode
+ok 224 - IOS reports TRAP mode before replacement; disconnect preserves mode
+  ---
+  duration_ms: 0.845489
+  type: 'test'
+  ...
+# Subtest: 36-bit values retain their upper four bits
+ok 225 - 36-bit values retain their upper four bits
+  ---
+  duration_ms: 1.123657
+  type: 'test'
+  ...
+# Subtest: one’s complement preserves both zero bit patterns
+ok 226 - one’s complement preserves both zero bit patterns
+  ---
+  duration_ms: 0.255594
+  type: 'test'
+  ...
+# Subtest: signed conversion boundaries and range rejection
+ok 227 - signed conversion boundaries and range rejection
+  ---
+  duration_ms: 0.590507
+  type: 'test'
+  ...
+# Subtest: end-around carry and negative-zero sum
+ok 228 - end-around carry and negative-zero sum
+  ---
+  duration_ms: 0.154001
+  type: 'test'
+  ...
+# Subtest: overflow is reported at signed range boundary
+ok 229 - overflow is reported at signed range boundary
+  ---
+  duration_ms: 0.19992
+  type: 'test'
+  ...
+# Subtest: address adder canonicalizes zero independently of arithmetic adder
+ok 230 - address adder canonicalizes zero independently of arithmetic adder
+  ---
+  duration_ms: 0.172389
+  type: 'test'
+  ...
+# Subtest: signed address arithmetic agrees with wrapped integers for 20,000 cases
+ok 231 - signed address arithmetic agrees with wrapped integers for 20,000 cases
+  ---
+  duration_ms: 14.288247
+  type: 'test'
+  ...
+# Subtest: rotate is reversible at all 36 rotations
+ok 232 - rotate is reversible at all 36 rotations
+  ---
+  duration_ms: 0.328934
+  type: 'test'
+  ...
+# Subtest: quarter insertion affects only its own nine bits
+ok 233 - quarter insertion affects only its own nine bits
+  ---
+  duration_ms: 0.448003
+  type: 'test'
+  ...
+# Subtest: octal parser rejects non-octal and overflow
+ok 234 - octal parser rejects non-octal and overflow
+  ---
+  duration_ms: 0.638179
+  type: 'test'
+  ...
+# Subtest: six-bit raw transport round trips and rejects nonframes
+ok 235 - six-bit raw transport round trips and rejects nonframes
+  ---
+  duration_ms: 0.89907
+  type: 'test'
+  ...
+# Subtest: published boot instruction has exact numeric encoding
+ok 236 - published boot instruction has exact numeric encoding
+  ---
+  duration_ms: 0.258879
+  type: 'test'
+  ...
+# Subtest: all opcode/hold/configuration fields round trip through assembly
+ok 237 - all opcode/hold/configuration fields round trip through assembly
+  ---
+  duration_ms: 15.663783
+  type: 'test'
+  ...
+# Subtest: instruction decoder preserves independent bit fields
+ok 238 - instruction decoder preserves independent bit fields
+  ---
+  duration_ms: 0.131427
+  type: 'test'
+  ...
+# Subtest: bit selector uses decimal bit positions and permuted quarter indices
+ok 239 - bit selector uses decimal bit positions and permuted quarter indices
+  ---
+  duration_ms: 0.190446
+  type: 'test'
+  ...
+# Subtest: F memory comes from published plugboard constants
+ok 240 - F memory comes from published plugboard constants
+  ---
+  duration_ms: 0.087782
+  type: 'test'
+  ...
+# Subtest: all eight fully active permutations invert on store
+ok 241 - all eight fully active permutations invert on store
+  ---
+  duration_ms: 0.493021
+  type: 'test'
+  ...
+# Subtest: all inactive quarters preserve the destination
+ok 242 - all inactive quarters preserve the destination
+  ---
+  duration_ms: 0.124718
+  type: 'test'
+  ...
+# Subtest: full-word partial activity sign extends positive and negative values
+ok 243 - full-word partial activity sign extends positive and negative values
+  ---
+  duration_ms: 0.083676
+  type: 'test'
+  ...
+# Subtest: fracture prevents sign extension crossing half-word boundary
+ok 244 - fracture prevents sign extension crossing half-word boundary
+  ---
+  duration_ms: 0.057256
+  type: 'test'
+  ...
+# Subtest: standard configuration 01 loads only the right half
+ok 245 - standard configuration 01 loads only the right half
+  ---
+  duration_ms: 0.055013
+  type: 'test'
+  ...
+# Subtest: standard configuration 01 stores only the right half
+ok 246 - standard configuration 01 stores only the right half
+  ---
+  duration_ms: 0.052879
+  type: 'test'
+  ...
+# Subtest: configuration validation rejects out-of-range F values
+ok 247 - configuration validation rejects out-of-range F values
+  ---
+  duration_ms: 0.137476
+  type: 'test'
+  ...
+1..247
+# tests 247
+# suites 0
+# pass 247
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 506.148761

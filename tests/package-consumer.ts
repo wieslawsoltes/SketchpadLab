@@ -1,0 +1,11 @@
+import {TX2, assembleM4, encodeBinaryTape, decodeBinaryTape, scanAssemblySource, TrapCircuit, TRAP_MODES, PLUGBOARD_WORDS, type ReferencePhase, type TapeBlock, type TrapSnapshot} from '@sketchpad-lab/tx2-toolchain';
+const machine=new TX2({profile:'tx2-io-research'});
+const image=assembleM4('100|\nLDA 200\n200|\n123\n☛☛PUNCH 100');
+const tape=encodeBinaryTape(image,{marker:128});
+machine.bootTape(tape);
+const blocks:TapeBlock[]=decodeBinaryTape(tape).blocks;
+const phase:ReferencePhase='defer';
+const trap=new TrapCircuit();trap.connect(TRAP_MODES.markDefer);
+trap.access(phase,false,0o100,0o60,0);const snapshot:TrapSnapshot=trap.snapshot();trap.restore(snapshot);
+console.log(PLUGBOARD_WORDS.length,scanAssemblySource('LDA [200]').code,blocks.length,machine.state().previousHold);
+machine.memory.onAccess=e=>console.log(e.phase,e.meta);

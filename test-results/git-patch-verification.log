@@ -1,0 +1,7 @@
+Applying: feat(tx2): execute reader-leader tape boots and implement reversible TRAP 42
+Applying: feat(console): refine archival console layout and add tape boot controls
+Applying: fix(debugger): honor post-transition breakpoints and verify loader checksum rejection
+Applying: fix(debugger): distinguish boundary reversal and highlight marked placekeepers
+Applying: release: package Sketchpad Lab 0.3.0 with isolated toolchain quality gates
+Bundle clone succeeded. Incremental patch tree: 7d469b872d8ddf99cd986b385995644a5eecb2ce
+Matches v0.3.0 tree exactly.
