@@ -56,6 +56,7 @@ export class DigitalSimulator {
         this.plan.levels.forEach((level, i) => level.forEach(g => this.levelOf[g] = i));
         this.dirty = new Uint8Array(this.plan.gates.length);
         this.queues = this.plan.levels.map(() => []);
+        this.firstDirtyLevel = Infinity; this.lastDirtyLevel = -1;
         this._invalidate();
         this.historyLimit = Math.min(historyLimit, Math.floor(historyBytes / Math.max(1, this.roots.length * 4)));
         this.history = []; this.evaluations = 0;
@@ -64,7 +65,11 @@ export class DigitalSimulator {
         this.settle();
     }
     _mark(index) {
-        if (!this.dirty[index]) { this.dirty[index] = 1; this.queues[this.levelOf[index]].push(index); }
+        if (!this.dirty[index]) {
+            const level = this.levelOf[index]; this.dirty[index] = 1; this.queues[level].push(index);
+            if (level < this.firstDirtyLevel) this.firstDirtyLevel = level;
+            if (level > this.lastDirtyLevel) this.lastDirtyLevel = level;
+        }
     }
     _invalidate() { for (let i = 0; i < this.plan.gates.length; i++) this._mark(i); }
     _evaluate() {
@@ -75,7 +80,9 @@ export class DigitalSimulator {
         }
         // A fanout gate is always in a later level. Process only gates whose
         // inputs changed; no heap, dynamic code generation, or instruction shortcut.
-        for (let level = 0; level < this.queues.length; level++) {
+        // Empty settles touch no dependency levels. Fanout can only extend the
+        // upper bound: no newly queued gate can precede the current level.
+        for (let level = this.firstDirtyLevel; level <= this.lastDirtyLevel; level++) {
             const queue = this.queues[level];
             for (const index of queue) {
                 this.dirty[index] = 0;
@@ -85,6 +92,7 @@ export class DigitalSimulator {
             }
             queue.length = 0;
         }
+        this.firstDirtyLevel = Infinity; this.lastDirtyLevel = -1;
     }
     _address(m) {
         let address = 0;
