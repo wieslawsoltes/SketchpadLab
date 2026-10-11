@@ -1,90 +1,50 @@
-# Sketchpad Lab 0.4.0
+# Sketchpad Lab 0.5.0
 
-A browser reconstruction of Ivan Sutherland's Sketchpad workflows and the TX-2 console, with a native-M4 restoration assembler, instruction emulator, reversible debugger, and an **optional independent gate/electrical hardware laboratory**.
+Browser reconstruction of Sketchpad workflows and the TX-2 console, with a native-M4 restoration assembler, reversible instruction emulator, and **optional independent gate/electrical hardware laboratory**.
 
-**The complete, unmodified original Sketchpad program does not yet boot.** The drawing application is newly written JavaScript; the gate board is synthesized research hardware rather than a transcription of the original TX-2 circuit cards. See [compatibility](docs/COMPATIBILITY.md) and [hardware fidelity](docs/HARDWARE.md).
+**The complete unmodified original Sketchpad application does not yet boot.** Published plugboard and reader-leader code now runs through the gate-built machine to load authored diagnostics from tape. That is not execution of the original drawing application, nor a historically exact transistor-level reconstruction. See [compatibility](docs/COMPATIBILITY.md).
+
+[Launch](https://wieslawsoltes.github.io/SketchpadLab/) · [Standalone HTML](https://wieslawsoltes.github.io/SketchpadLab/Sketchpad-Lab.html) · [Hardware SDK](docs/HARDWARE.md) · [Gate I/O and bootstrap](docs/GATE-IO.md)
 
 ## Run
-
-[Launch the application](https://wieslawsoltes.github.io/SketchpadLab/) or [download the generated standalone HTML](https://wieslawsoltes.github.io/SketchpadLab/Sketchpad-Lab.html). GitHub Pages is rebuilt after the checks pass on `main`.
-
-From source, Node.js 22 or later is sufficient; there are no runtime package dependencies:
 
 ```sh
 npm run dev
 # http://localhost:4173/apps/studio/index.html
 npm run build
-# Generates dist/ and Sketchpad-Lab.html for offline use.
+# Generates dist/ and the self-contained Sketchpad-Lab.html.
 ```
 
-The generated HTML embeds the styles, module graph and worker bootstraps without a CDN. The browser must allow JavaScript, Blob URLs and workers. WebGPU requires a supported browser/context; the drawing renderer has a Canvas fallback. Hardware computation uses CPU gates by default and never silently substitutes them for a failed selected GPU backend.
+Node.js 22+ is sufficient for build/runtime tooling. There are no runtime package dependencies. The standalone embeds its modules and workers; browsers must permit JavaScript, Blob URLs and workers. CPU gates are the default. Explicitly selecting WebGPU requires a supported secure context and adapter; GPU failures are not hidden by an instruction-interpreter fallback.
 
-Build outputs belong in CI artifacts and are regenerated from source, rather than serving stale checked-in copies.
+## New in 0.5.0
 
-## Hardware laboratory
+The gate board now includes priority sequence control, HOLD/dismissal, placekeepers, LIMBO, IOS/TSD handshakes, tape buffers/rewind, scope output, circular light-pen detection, punch output and TRAP logic. Gate-controlled tape boot begins with cleared configuration and payload RAM, executes the published loader, and transfers to compiled user code. The optional workbench shows actual emitted scope records and accepts live pen input while leaving the original instruction workspace untouched.
 
-Click **Hardware**, choose a model, and click **Enable & build**. Merely opening the panel does not allocate a hardware worker; the original drawing and instruction workspaces remain intact.
+**GPU-resident execution** advances gates, flip-flops, RAM and gate-built devices in bounded batches. A RAM-dependency schedule evaluates every gate once per settle rather than twice. The CPU backend uses packed schedules and compressed sparse-row dirty fanout. Neither backend calls the instruction emulator to manufacture results.
 
-The laboratory includes four-state clocked gates, delayed inertial/transport gates, a 48-opcode research board, bounded gate-built RAM, an RLC/diode/BJT transient solver and explicit digital/analog coupling. Run/step/reverse, breakpoints, waveforms, source editing, actual driver-cone inspection, portable snapshots and VCD/wiring export are available. Closing pauses the laboratory; Power off releases its worker and storage.
+**Adaptive electrical integration** adds backward-Euler step doubling, explicit tolerances, exact source-breakpoint handling and atomic observation intervals. Mixed-signal integration preserves the requested DAC/ADC sampling interval and one digital edge, even when internal analog steps subdivide.
 
-The extended board currently contains **214,395 Boolean gates and 1,736 flip-flops**, plus explicit RAM macros by default. The 256-word gate-RAM option uses flip-flops and multiplexers for its data and metadata. These are synthesized implementation counts, not historical TX-2 component counts.
+Opening **Hardware** allocates no simulator; **Enable & build** creates its worker. Close pauses; Power off releases it. Clock/instruction step, reverse, breakpoints, checkpoints, portable snapshots, VCD, wiring export and actual driver inspection remain available.
 
-The board executes its own gate connectivity, not the instruction emulator. It does not yet implement the full TX-2 sequence, INOUT, TRAP, tape-boot or peripheral circuitry. Generic electrical models do not establish a transistor-accurate original machine. Read [the model contracts, SDK examples and validation requirements](docs/HARDWARE.md).
-
-## Drawing, assembly and instruction research
-
-The drawing reconstruction supports lines/circles/arcs, shared points, snapping, constraints, live master instances, attachers, definition copying/dismembering, vector text/scalars, undo/redo, JSON persistence and modern SVG/HP-GL export. The console includes 37 controls, 288 toggles, encoders, register lamps and an optional console-only view. Its appearance is evidence-guided, not a certified dimensionally exact replica.
-
-The separate instruction workbench provides exact 36-bit words, one's-complement arithmetic, the bounded explicit/native-M4 assemblers, memory/configuration handling, breakpoints, watchpoints, snapshots and reversal. Its INOUT research profile executes the published plugboard/reader leader to load generated binary tapes and includes scope, light-pen, paper-tape and TRAP research models. These capabilities are not automatically capabilities of the new gate board.
-
-## Reusable packages
+## Packages and validation
 
 ```sh
 npm run package:toolchain
 npm run package:hardware
-```
-
-The resulting self-contained tarballs are `artifacts/sketchpad-lab-tx2-toolchain-0.4.0.tgz` and `artifacts/sketchpad-lab-hardware-sim-0.4.0.tgz`. Both include notices and strict TypeScript declarations. No registry publication is implied by creating a tarball.
-
-```js
-import {TX2GateBoard} from '@sketchpad-lab/hardware-sim';
-import {assemble} from '@sketchpad-lab/hardware-sim/assembler';
-
-const image = assemble('.org 100\nLDA 200\n.org 200\n.word 0d1963');
-if (image.diagnostics.length) throw new Error(JSON.stringify(image.diagnostics));
-const board = new TX2GateBoard(image);
-board.stepInstruction();
-console.log(board.state().A); // 1963n, from gate execution
-```
-
-The combined toolchain exposes hardware through `@sketchpad-lab/tx2-toolchain/hardware`. Its default/core API remains the separate instruction-level implementation.
-
-## Quality checks
-
-```sh
+npm run test:package
+npm run test:hardware-package
 npm run check
 npm test
 npm run test:types
 npm run build
 npm run test:browser
 npm run test:hardware-browser -- --gpu
-npm run package:toolchain
-npm run test:package
-npm run package:hardware
-npm run test:hardware-package
+python tests/resident_browser.py --require-gpu
 ```
 
-Type checks require TypeScript; browser checks require Python Playwright and Chromium. CI installs these test tools, exercises both workspaces and isolated package installations, and archives the exact tested source plus generated distributions. Hardware GPU checks report adapter availability explicitly; `python tests/hardware_browser.py --gpu --require-gpu` makes lack of execution a failure.
+Tarballs are `artifacts/sketchpad-lab-tx2-toolchain-0.5.0.tgz` and `artifacts/sketchpad-lab-hardware-sim-0.5.0.tgz`. They include transitive modules, notices and strict TypeScript declarations. Creating a tarball does not publish it to npm. Type/browser tests require TypeScript and Python Playwright/Chromium; CI installs pinned test tools, archives exact source identity, runs both GPU backends and deploys passing main builds.
 
-The Node suite contains **298 passing regression tests** at this release, plus **33 original-workspace and 17 hardware-browser workflows**. Counts are regression coverage, not proof of full historical compatibility. See [0.4.0 release notes](docs/RELEASE-0.4.0.md); GPU environment results are recorded in the CI hardware report.
+[Validation and measurements](docs/VALIDATION.md) · [Release notes](docs/RELEASE-0.5.0.md) · [Architecture](docs/ARCHITECTURE.md) · [Assembler](docs/ASSEMBLER.md) · [Tape format](docs/TAPE.md) · [Controls](docs/CONTROLS.md) · [Visual fidelity](docs/VISUAL-FIDELITY.md) · [Sources](docs/SOURCES.md) · [Notices](THIRD_PARTY_NOTICES.md)
 
-## Original sources and attribution
-
-`sk.tx2as` and `sk2.tx2as` are not bundled or relicensed. Archive import/fetch preserves source bytes and verifies pinned identity/length; a matching hash does not prove historical correctness. The alternate listing is not asserted to be the latest working release.
-
-```sh
-npm run originals:fetch
-npm run originals:verify
-```
-
-[Hardware](docs/HARDWARE.md) · [Compatibility](docs/COMPATIBILITY.md) · [Architecture](docs/ARCHITECTURE.md) · [Assembler](docs/ASSEMBLER.md) · [Tape bootstrap](docs/TAPE.md) · [Controls](docs/CONTROLS.md) · [Visual fidelity](docs/VISUAL-FIDELITY.md) · [Sources](docs/SOURCES.md) · [Attribution](THIRD_PARTY_NOTICES.md)
+Original `sk.tx2as` and `sk2.tx2as` files are not bundled or relicensed. Archive fetch/import preserves and verifies pinned bytes; hash identity does not establish assembly correctness or a latest working historical release.
