@@ -1,4 +1,5 @@
 import { importNetlist } from './digital.js';
+import { memorySchedule } from './memory-schedule.js';
 
 export const NO_WRITE = 0xffffffff;
 export const RESIDENT_HEADER_WORDS = 8;
@@ -16,9 +17,10 @@ export function packResidentPlan(source, { probes = [], maxBatch = 16, maxJourna
         !Number.isSafeInteger(maxJournalBytes) || maxJournalBytes < 4 || maxJournalBytes > 128 * 1024 * 1024)
         throw new RangeError('Invalid resident batch/journal budget');
     const data = [], append = values => { const offset = data.length; for (const v of values) data.push(v); return offset; };
-    const gates = append(plan.order.flatMap(i => { const g = plan.gates[i]; return [g.op, g.a, g.b, g.c, g.q]; }));
+    const schedule = memorySchedule(plan);
+    const gates = append(schedule.order.flatMap(i => { const g = plan.gates[i]; return [g.op, g.a, g.b, g.c, g.q]; }));
     let offset = 0;
-    const levels = append([...plan.levels.map(level => { const start = offset; offset += level.length; return start; }), offset]);
+    const levels = append([...schedule.levels.map(level => { const start = offset; offset += level.length; return start; }), offset]);
     const flops = append(plan.flops.flatMap(f => [f.q, f.d, f.enable, f.reset, f.initial]));
     const driven = new Set(plan.gates.map(g => g.q));
     const roots = plan.names.map((_n, i) => i).filter(i => !driven.has(i));
@@ -49,11 +51,11 @@ export function packResidentPlan(source, { probes = [], maxBatch = 16, maxJourna
     }
     // Bound shader work as well as allocations: a circuit with a deep divider
     // must not be allowed to submit hundreds of millions of gates in one batch.
-    const evaluationPasses = plan.memories.length ? 2 : 1;
+    const evaluationPasses = 1; // RAM boundary partition evaluates each gate once per settle.
     const workBound = Math.max(1, Math.floor(8_000_000 / Math.max(1, plan.gates.length * evaluationPasses)) - 1);
     const capacity = Math.min(maxBatch, workBound, Math.floor(maxJournalBytes / Math.max(4, recordWords * 4)));
     if (capacity < 1) throw new RangeError('Resident journal budget cannot retain one clock');
-    return { plan, data: Uint32Array.from(data), gates, levels, flops, roots, rootOffset, memories,
+    return { plan, schedule, data: Uint32Array.from(data), gates, levels, flops, roots, rootOffset, memories,
         memoryLayout, ramWords, recordWords, signals, probePins, probeOffset, sampleOffset, ports,
         capacity, wireWords: plan.names.length,
         recordsOffset: RESIDENT_HEADER_WORDS + plan.names.length,

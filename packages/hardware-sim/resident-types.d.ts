@@ -14,7 +14,7 @@ export interface ResidentRunOptions {
 export interface ResidentResult {executed:number;reason:'budget'|'halt'|'condition';ticks:number;samples:WaveSample[]}
 export interface ResidentStats {
     backend:'webgpu-resident';batchCapacity:number;dispatches:number;evaluations:number;
-    uploadedBytes:number;readbackBytes:number;
+    uploadedBytes:number;readbackBytes:number;gatesPerSettle:number;scheduleLevels:number;addressGates:number;
     adapter:{vendor:string;architecture:string;description:string;isFallbackAdapter:boolean|null}|null;
 }
 /** Gates, registers, RAM and gate-built peripherals advance in GPU storage.

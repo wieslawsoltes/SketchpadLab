@@ -6,7 +6,7 @@
  * Reference: https://www.w3.org/TR/WGSL/#synchronization-builtin-functions */
 export function residentShader(l) {
     const constant = (name, n) => `const ${name}:u32=${n}u;`;
-    const constants = Object.entries({ GATES:l.gates, LEVELS:l.levels, LEVEL_COUNT:l.plan.levels.length,
+    const constants = Object.entries({ GATES:l.gates, LEVELS:l.levels, LEVEL_COUNT:l.schedule.levels.length, READ_BOUNDARY:l.schedule.readBoundary,
         FLOPS:l.flops, FLOP_COUNT:l.plan.flops.length, ROOTS:l.rootOffset, ROOT_COUNT:l.roots.length,
         MEMORIES:l.memories, MEMORY_COUNT:l.plan.memories.length, WIRES:l.wireWords,
         RECORDS:l.recordsOffset, RECORD_SIZE:l.recordWords, PROBES:l.probeOffset, PROBE_COUNT:l.probePins.length,
@@ -34,8 +34,8 @@ fn memory_address(m:u32) -> u32 {
     let a=read_bus(plan[m+2u],plan[m+3u]);
     return select(NONE,a.value,a.valid==1u && a.value<plan[m+1u]);
 }
-fn evaluate(lane:u32) {
-    for(var level=0u;level<LEVEL_COUNT;level++) {
+fn evaluate(lane:u32, begin:u32, endLevel:u32) {
+    for(var level=begin;level<endLevel;level++) {
         let first=plan[LEVELS+level]; let end=plan[LEVELS+level+1u];
         for(var index=first+lane;index<end;index+=64u) {
             let g=GATES+index*5u; let op=plan[g]; var bv=0u; var cv=0u;
@@ -47,7 +47,7 @@ fn evaluate(lane:u32) {
     }
 }
 fn settle(lane:u32) {
-    evaluate(lane);
+    evaluate(lane,0u,READ_BOUNDARY);
     if(MEMORY_COUNT>0u) {
         // Address cones cannot depend on RAM read pins (validated on import).
         for(var i=lane;i<MEMORY_COUNT;i+=64u) {
@@ -59,8 +59,8 @@ fn settle(lane:u32) {
             }
         }
         storageBarrier();
-        evaluate(lane);
     }
+    evaluate(lane,READ_BOUNDARY,LEVEL_COUNT);
 }
 @compute @workgroup_size(64)
 fn execute(@builtin(local_invocation_index) lane:u32) {

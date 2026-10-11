@@ -6,6 +6,7 @@ import { residentShader } from './resident-shader.js';
  * mirror is updated from a validated GPU journal once per batch, never by calling
  * its clock(), settle(), or instruction interpreter during forward execution.
  * Explicit mirror edits/reverse/restore are uploaded at the next batch boundary.
+ * A RAM-dependency partition evaluates each gate once per settle.
  * One batch is transactional on validation, device-loss, or readback failure. */
 export class GPUResidentSimulator {
     static async create(simulator, { gpu = globalThis.navigator?.gpu, ...options } = {}) {
@@ -133,14 +134,15 @@ export class GPUResidentSimulator {
             s.firstDirtyLevel = Infinity; s.lastDirtyLevel = -1;
             s.roots.forEach((pin, i) => s.lastRoots[i] = s.values[pin]);
             s.revision++; this.uploadedRevision = s.revision;
-            this.evaluations += (result.executed + 1) * l.plan.gates.length * (s.memories.length ? 2 : 1);
+            this.evaluations += (result.executed + 1) * l.plan.gates.length;
             return { executed: result.executed, reason: result.reason, ticks: s.ticks, samples: result.samples };
         } catch (e) { this.invalidate(); throw e; }
         finally { this.busy = false; }
     }
     async clock() { await this.run(1, { stop: false }); return this.simulator.ticks; }
     stats() { return { backend: this.backend, batchCapacity: this.batchCapacity, dispatches: this.dispatches,
-        evaluations: this.evaluations, uploadedBytes: this.uploadedBytes, readbackBytes: this.readbackBytes, adapter: this.adapter ?? null }; }
+        evaluations: this.evaluations, uploadedBytes: this.uploadedBytes, readbackBytes: this.readbackBytes, gatesPerSettle: this.layout.plan.gates.length,
+        scheduleLevels: this.layout.schedule.levels.length, addressGates: this.layout.schedule.beforeGates, adapter: this.adapter ?? null }; }
     dispose() {
         this.failure = new Error('Resident GPU engine disposed');
         for (const resource of this.resources) resource.destroy(); this.resources.length = 0; this.device.destroy();
