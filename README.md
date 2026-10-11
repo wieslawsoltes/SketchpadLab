@@ -6,6 +6,10 @@ A working browser reconstruction of Sketchpad's drawing workflows and physical T
 
 ## Open it
 
+**[Launch Sketchpad Lab on GitHub Pages](https://wieslawsoltes.github.io/SketchpadLab/).**
+The site is rebuilt and deployed automatically after the checks pass on `main`.
+The [standalone HTML](https://wieslawsoltes.github.io/SketchpadLab/Sketchpad-Lab.html) is also available to save for offline use.
+
 Open **`Sketchpad-Lab.html`** in a normal browser tab. It is self-contained: styles, 34 JavaScript modules, and a Worker bootstrap; no CDN, package install, account, API key, or server. The browser must allow JavaScript, Blob URLs and Workers. Embedded previews may restrict these.
 
 WebGPU is attempted, with Canvas 2D fallback. This build's browser tests exercised Canvas 2D; hardware WebGPU execution is not certified.
