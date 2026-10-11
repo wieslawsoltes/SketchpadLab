@@ -48,7 +48,7 @@ export class DigitalSimulator {
         if (this.plan.cyclic) throw new Error('Clocked backend does not accept combinational loops; use TimedSimulator');
         if (!Number.isInteger(historyLimit) || historyLimit < 0 || historyLimit > 10000 || !Number.isSafeInteger(historyBytes) || historyBytes < 0)
             throw new RangeError('Invalid history budget');
-        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.backend = 'cpu-gates';
+        this.values = Uint32Array.from(this.plan.initial); this.ticks = 0; this.revision = 0; this.backend = 'cpu-gates';
         const driven = new Set(this.plan.gates.map(g => g.q));
         this.roots = this.plan.names.map((_name, i) => i).filter(i => !driven.has(i));
         this.lastRoots = new Uint32Array(this.roots.length).fill(4);
@@ -100,6 +100,8 @@ export class DigitalSimulator {
         return address < m.depth ? address : -1;
     }
     settle() {
+        // Host edits/reversal invalidate device-resident mirrors without hashing RAM.
+        this.revision++;
         this._evaluate();
         for (const m of this.memories) {
             const address = this._address(m);
@@ -117,8 +119,7 @@ export class DigitalSimulator {
         writeBus(this.values, bus, value); this.history.length = 0; this.settle();
     }
     read(name) {
-        const bus = this.plan.outputs[name] ?? this.plan.inputs[name]; if (!bus) throw new Error(`Unknown port ${name}`);
-        return readBus(this.values, bus, name);
+        const bus = this.plan.outputs[name] ?? this.plan.inputs[name]; if (!bus) throw new Error(`Unknown port ${name}`); return readBus(this.values, bus, name);
     }
     memory(name) { const m = this.memories.find(m => m.name === name); if (!m) throw new Error(`Unknown memory ${name}`); return m; }
     poke(name, address, value) {
