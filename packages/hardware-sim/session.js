@@ -95,7 +95,8 @@ export class HardwareSession {
                     this.simulator.runUntil(Math.min(until,this.simulator.time+10));
                 }else if(this.kind==='mixed'||this.kind==='electrical'){
                     let dt=step;const e=this.electrical();
-                    for(const c of e.components)if(c.source?.pwl&&e.overrides[c.name]===undefined)
+                    // Adaptive integration handles source knots internally without changing the observation/ADC interval.
+                    if(e.integration?.mode!=='adaptive')for(const c of e.components)if(c.source?.pwl&&e.overrides[c.name]===undefined)
                         for(const [time]of c.source.pwl)if(time>e.time&&time<e.time+dt){dt=time-e.time;break;}
                     this.simulator.step(dt);
                 }else if(this.gpu)await this.gpu.clock();else this.simulator.clock();
