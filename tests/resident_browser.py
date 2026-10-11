@@ -66,6 +66,32 @@ with sync_playwright() as p:
                     report = page.evaluate(script, records)
                 except Exception as error:
                     report = {'status':'failed', 'reason':str(error), 'physicalGPUVerified':False}
+                if report.get('status') == 'passed':
+                    # Exercise the actual standalone module graph and worker in
+                    # the same trustworthy file context used for shader checks.
+                    try:
+                        page.goto((ROOT/'Sketchpad-Lab.html').as_uri())
+                        page.wait_for_function('window.sketchpadHardware')
+                        page.click('#hardware-open')
+                        page.uncheck('#hw-extended')
+                        page.select_option('#hw-backend','webgpu-resident')
+                        page.click('#hw-build')
+                        page.wait_for_function('!document.querySelector("#hw-build").disabled',timeout=120000)
+                        assert page.locator('#hw-status').get_attribute('data-error') != 'true', page.locator('#hw-status').inner_text()
+                        for _ in range(3):
+                            page.click('#hw-instruction')
+                            page.wait_for_function('!document.querySelector("#hw-build").disabled',timeout=120000)
+                            assert page.locator('#hw-status').get_attribute('data-error') != 'true', page.locator('#hw-status').inner_text()
+                        assert page.evaluate('sketchpadHardware.state.backend') == 'webgpu-resident'
+                        assert int(page.evaluate('sketchpadHardware.state.ports.find(p=>p.name==="A").value'),8) == 3989
+                        assert page.evaluate('sketchpadLab.machine.cycles') == 0
+                        page.screenshot(path=str(args.out/'resident-workbench.png'))
+                        report['workbench']={'passed':True,'accumulator':3989,'instructionEmulatorCycles':0,'statistics':page.evaluate('sketchpadHardware.state.gpu')}
+                        page.click('#hw-off')
+                        assert not page.evaluate('sketchpadHardware.powered')
+                    except Exception as error:
+                        report['status']='failed'
+                        report['reason']='Resident workbench: '+str(error)
     finally:
         browser.close()
 (args.out/'report.json').write_text(json.dumps(report, indent=2)+'\n')
