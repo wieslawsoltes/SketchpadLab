@@ -55,7 +55,9 @@ export function buildTX2Board(image,{memory='macro',depth=131072,extended=false}
     const validOperation=b.any(Object.values(is));
     const unsupportedControl=b.any([b.and(is.JMP,b.or(arg[17],config[4])),b.and(is.SKX,b.or(config[3],config[4])),b.and(any('JPX','JNX'),b.not(N.q[35]))]);
     const deferLimit=b.and(resolve,b.and(deferred,b.eqConstant(deferCount.q,4096)));
-    const memoryNeeded=b.or(fetch,b.and(b.not(direct),b.or(resolve,execute)));
+    // A non-deferred RESOLVE computes the indexed target without reading RAM.
+    // Only pointer-chasing reads the raw EA during this phase.
+    const memoryNeeded=b.or(fetch,b.or(b.and(resolve,deferred),b.and(execute,b.not(direct))));
     const arithmeticFault=b.wire('arithmeticFault');
     const fault=b.or(arithmeticFault,b.or(b.and(execute,b.or(b.not(validOperation),unsupportedControl)),b.or(deferLimit,b.and(memoryNeeded,b.not(mapped)))));
     const active=b.and(running,b.not(fault)),commit=b.and(execute,active);
