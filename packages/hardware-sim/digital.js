@@ -37,8 +37,9 @@ export function importNetlist(source) {
     return b.compile({ allowCycles: true });
 }
 export function flopValue(values, f) {
-    const enabled = logicGate(Gate.MUX, values[f.q], values[f.d], values[f.enable]);
-    return logicGate(Gate.MUX, enabled, f.initial, values[f.reset]);
+    // Pins and reset values are validated once when importing the netlist.
+    const enabled = TRUTH_TABLE[512 + values[f.q] + 4 * values[f.d] + 16 * values[f.enable]];
+    return TRUTH_TABLE[512 + enabled + 4 * f.initial + 16 * values[f.reset]];
 }
 /** Clocked, levelized four-state interpreter. All datapath values come from gates. */
 export class DigitalSimulator {
@@ -142,9 +143,9 @@ export class DigitalSimulator {
             writes.push({ mi, offset, old: m.values.slice(offset, offset + m.width), data: m.data.map(p => this.values[p]) });
         }
         const before = this.historyLimit ? { ticks: this.ticks, roots: Uint32Array.from(this.roots, pin => this.values[pin]), writes } : null;
-        this.plan.flops.forEach((f, i) => this.nextFlops[i] = flopValue(this.values, f));
+        for (let i = 0; i < this.plan.flops.length; i++) this.nextFlops[i] = flopValue(this.values, this.plan.flops[i]);
         for (const w of writes) this.memories[w.mi].values.set(w.data, w.offset);
-        this.plan.flops.forEach((f, i) => this.values[f.q] = this.nextFlops[i]);
+        for (let i = 0; i < this.plan.flops.length; i++) this.values[this.plan.flops[i].q] = this.nextFlops[i];
         this.ticks++;
         if (before) { this.history.push(before); if (this.history.length > this.historyLimit) this.history.shift(); }
         this.settle();
@@ -183,7 +184,7 @@ export class DigitalSimulator {
 }
 /** Bounded sampled waveforms, independently exportable to ordinary VCD viewers. */
 export class Waveform {
-    constructor(plan, names, { limit = 4096, tickNs = 400 } = {}) {
+    constructor(plan, names, { limit = 4096, tickNs = 1 } = {}) {
         if (!Number.isInteger(limit) || limit < 1 || limit > 100000 || !Number.isSafeInteger(tickNs) || tickNs < 1) throw new RangeError('Invalid waveform limits');
         this.signals = names.map(name => { const bus = plan.outputs[name] ?? plan.inputs[name]; if (!bus) throw new Error(`Unknown probe ${name}`); return { name, bus: [...bus] }; });
         if (this.signals.length > 128) throw new RangeError('Probe budget exceeded');

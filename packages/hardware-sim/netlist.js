@@ -23,6 +23,7 @@ export class NetlistBuilder {
     }
     input(name, width = 1, initial = 0n) {
         integer(width, 1, 72, 'bus width'); this.unique(name, this.inputs);
+        initial = BigInt(initial); if (initial < 0n || initial >= 1n << BigInt(width)) throw new RangeError('Input initial value does not fit');
         const bus = Array.from({ length: width }, (_, i) => this.wire(`${name}[${i}]`, Number((BigInt(initial) >> BigInt(i)) & 1n)));
         for (const pin of bus) this.claim(pin, 'input'); this.inputs[name] = bus; return bus;
     }
@@ -70,6 +71,7 @@ export class NetlistBuilder {
     eqConstant(a, n) { return this.eq(a, this.constant(n, a.length)); }
     register(name, width, initial = 0n) {
         integer(width, 1, 72, 'register width');
+        initial = BigInt(initial); if (initial < 0n || initial >= 1n << BigInt(width)) throw new RangeError('Register initial value does not fit');
         const q = Array.from({ length: width }, (_, i) => this.wire(`${name}[${i}]`, Number((BigInt(initial) >> BigInt(i)) & 1n)));
         for (const pin of q) this.claim(pin, 'flop');
         let connected = false;
