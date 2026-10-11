@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('..', import.meta.url)), out = join(root, 'ar
 await mkdir(out, { recursive: true });
 await rm(stage, { recursive: true, force: true });
 await mkdir(stage, { recursive: true });
-for (const name of ['tx2-core', 'tx2-assembler'])
+for (const name of ['tx2-core', 'tx2-assembler', 'hardware-sim'])
     await cp(join(root, 'packages', name), join(stage, name), { recursive: true });
 for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md'])
     await cp(join(root, name), join(stage, name));
@@ -16,7 +16,7 @@ await cp(join(root, 'docs'), join(stage, 'docs'), { recursive: true });
 const exportsText = "export * from './tx2-core/index.js';\nexport * from './tx2-assembler/index.js';\n";
 await writeFile(join(stage, 'index.js'), exportsText);
 await writeFile(join(stage, 'index.d.ts'), exportsText);
-await writeFile(join(stage, 'package.json'), JSON.stringify({ name: '@sketchpad-lab/tx2-toolchain', version, type: 'module', description: 'Standalone TX-2 research assembler, emulator and reversible debugger primitives; not full original Sketchpad compatibility', license: 'MIT', engines: { node: '>=22' }, exports: { '.': { types: './index.d.ts', import: './index.js' }, './core': { types: './tx2-core/index.d.ts', import: './tx2-core/index.js' }, './assembler': { types: './tx2-assembler/index.d.ts', import: './tx2-assembler/index.js' }, './provenance': { types: './tx2-assembler/provenance.d.ts', import: './tx2-assembler/provenance.js' } }, types: './index.d.ts', bin: { 'tx2-assemble': './bin/assemble.mjs' } }, null, 2) + '\n');
+await writeFile(join(stage, 'package.json'), JSON.stringify({ name: '@sketchpad-lab/tx2-toolchain', version, type: 'module', description: 'Standalone TX-2 research assembler, emulator and reversible debugger primitives; not full original Sketchpad compatibility', license: 'MIT', engines: { node: '>=22' }, exports: { '.': { types: './index.d.ts', import: './index.js' }, './core': { types: './tx2-core/index.d.ts', import: './tx2-core/index.js' }, './assembler': { types: './tx2-assembler/index.d.ts', import: './tx2-assembler/index.js' }, './hardware': { types: './hardware-sim/index.d.ts', import: './hardware-sim/index.js' }, './provenance': { types: './tx2-assembler/provenance.d.ts', import: './tx2-assembler/provenance.js' } }, types: './index.d.ts', bin: { 'tx2-assemble': './bin/assemble.mjs' } }, null, 2) + '\n');
 await mkdir(join(stage, 'bin'));
 const cli = await readFile(join(root, 'tools/assemble.mjs'), 'utf8');
 await writeFile(join(stage, 'bin/assemble.mjs'), '#!/usr/bin/env node\n' + cli.replace('../packages/tx2-assembler/', '../tx2-assembler/'));
