@@ -41,6 +41,7 @@ jobs:
           sha256sum artifacts/sketchpad-lab-source.zip > artifacts/source-SHA256SUMS.txt
       - run: npm run test:browser
       - run: npm run test:hardware-browser -- --gpu
+      - run: python tests/resident_browser.py --require-gpu
       - uses: actions/upload-artifact@v4
         if: always()
         with:
