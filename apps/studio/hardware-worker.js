@@ -7,7 +7,7 @@ self.onmessage=({data})=>{
         try{session.pen(data.pen);reply({ok:true,...(!session.busy?{state:session.summary()}: {})});}
         catch(error){reply({ok:false,error:error.message});}return;
     }
-    if(data.op==='pause'){session.pause();reply({ok:true,state:session.summary()});return;}
+    if(data.op==='pause'){session.pause();reply({ok:true,...(!session.busy?{state:session.summary()}: {})});return;}
     if(++queued>16){queued--;reply({ok:false,error:'Hardware command queue limit exceeded'});return;}
     pending=pending.then(async()=>{
         try{
