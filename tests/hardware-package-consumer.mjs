@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {NetlistBuilder,DigitalSimulator,TX2GateBoard,ElectricalSimulator,MixedSignalSimulator,HardwareSession,hardwareExamples} from '@sketchpad-lab/hardware-sim';
+import {assemble} from '@sketchpad-lab/hardware-sim/assembler';
+const b=new NetlistBuilder('installed counter'),r=b.register('r',9);r.connect(b.add(r.q,b.constant(1,9)).sum);b.output('r',r.q);
+const d=new DigitalSimulator(b.compile());d.run(514);assert.equal(d.read('r'),2n);assert.ok(d.back());assert.equal(d.read('r'),1n);
+const image=assemble('.org 100\nLDA 200\nADD 201\n.org 200\n.word 0d1963\n.word 0d2026');
+const board=new TX2GateBoard(image,{depth:256});board.stepInstruction();board.stepInstruction();assert.equal(board.state().A,3989n);
+const examples=hardwareExamples();const electrical=new ElectricalSimulator(JSON.parse(examples.find(e=>e.kind==='electrical').source));
+electrical.run(.001,.000001);assert.ok(Math.abs(electrical.voltage('out')-5*(1-Math.exp(-1)))<.001);
+const mixed=new MixedSignalSimulator(JSON.parse(examples.find(e=>e.kind==='mixed').source));mixed.step(1e-5);assert.equal(mixed.digital.read('sample'),1n);
+const session=new HardwareSession();await session.load({...examples[0],extended:false});await session.advance({operation:'instruction'});
+const saved=session.exportSnapshot();await session.restoreSnapshot(saved);assert.equal(session.exportSnapshot(),saved);session.dispose();
+console.log('Installed hardware package: gates, compiled board, electrical, mixed, and session snapshots passed.');

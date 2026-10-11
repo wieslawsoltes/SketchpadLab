@@ -1,9 +1,0 @@
-{
-  "name": "@sketchpad-lab/vector-display",
-  "version": "0.3.0",
-  "type": "module",
-  "exports": "./index.js",
-  "types": "./index.d.ts",
-  "license": "MIT",
-  "private": true
-}

@@ -1,12 +1,10 @@
 {
   "name": "sketchpad-lab",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Sketchpad reconstruction and independently inspectable TX-2 preservation workbench",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "node tools/serve.mjs",
     "build": "node tools/build.mjs",
@@ -18,9 +16,11 @@
     "package:toolchain": "node tools/package-toolchain.mjs",
     "test:browser": "python tests/browser_smoke.py",
     "test:types": "tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext tests/api-types.ts",
-    "test:package": "node tools/verify-package.mjs"
+    "test:package": "node tools/verify-package.mjs",
+    "package:hardware": "node tools/package-hardware.mjs",
+    "test:hardware-package": "node tools/verify-hardware-package.mjs",
+    "test:hardware-browser": "python tests/hardware_browser.py",
+    "test:hardware": "node --test tests/hardware*.test.mjs"
   },
-  "engines": {
-    "node": ">=22"
-  }
+  "engines": {"node": ">=22"}
 }
