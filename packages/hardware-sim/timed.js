@@ -33,7 +33,7 @@ export class TimedSimulator {
         this.delayModel = delayModel; this.clockToQ = timeValue(clockToQ); this.maxEvents = maxEvents; this.traceLimit = traceLimit;
         this.values = Uint32Array.from(this.plan.initial); this.time = 0; this.serial = 0; this.processed = 0;
         this.tokens = new Float64Array(this.plan.gates.length); this.desired = new Uint32Array(this.plan.gates.length).fill(4);
-        this.events = new Events(); this.trace = []; this.history = [];
+        this.events = new Events(); this.trace = []; this.traceBase = this.values.slice(); this.traceBaseTime = 0; this.history = [];
         this.plan.gates.forEach((_g, i) => this._scheduleGate(i));
     }
     _push(event) {
@@ -92,7 +92,8 @@ export class TimedSimulator {
                 for (const index of affected) this._scheduleGate(index);
                 if (changed.size) {
                     this.trace.push({ time: this.time, changes: [...changed].map(pin => [pin, this.values[pin]]) });
-                    if (this.trace.length > this.traceLimit) this.trace.shift();
+                    if (this.trace.length > this.traceLimit) { const dropped = this.trace.shift();
+                        for (const [pin, value] of dropped.changes) this.traceBase[pin] = value; this.traceBaseTime = dropped.time; }
                 }
             }
             this.time = until; this.processed += count;
@@ -103,15 +104,16 @@ export class TimedSimulator {
     read(name) { const bus = this.plan.outputs[name] ?? this.plan.inputs[name]; if (!bus) throw new Error(`Unknown port ${name}`); return readBus(this.values, bus, name); }
     snapshot() { return { schema: 'hardware-timed-1', fingerprint: this.plan.fingerprint, delayModel: this.delayModel, clockToQ: this.clockToQ,
         time: this.time, serial: this.serial, processed: this.processed, values: this.values.slice(), tokens: this.tokens.slice(), desired: this.desired.slice(),
-        events: structuredClone(this.events.items), trace: structuredClone(this.trace) }; }
+        events: structuredClone(this.events.items), trace: structuredClone(this.trace), traceBase: this.traceBase.slice(), traceBaseTime: this.traceBaseTime }; }
     _restore(s) { this.time = s.time; this.serial = s.serial; this.processed = s.processed; this.values.set(s.values); this.tokens.set(s.tokens); this.desired.set(s.desired);
-        this.events = new Events(structuredClone(s.events)); this.trace = structuredClone(s.trace); }
+        this.events = new Events(structuredClone(s.events)); this.trace = structuredClone(s.trace); this.traceBase.set(s.traceBase); this.traceBaseTime = s.traceBaseTime; }
     restore(s) {
         const array = (a, n, hi) => (Array.isArray(a) || ArrayBuffer.isView(a)) && a.length === n && Array.from(a).every(v => Number.isSafeInteger(v) && v >= 0 && v <= hi);
         if (s?.schema !== 'hardware-timed-1' || s.fingerprint !== this.plan.fingerprint || s.delayModel !== this.delayModel || s.clockToQ !== this.clockToQ ||
             !array([s.time, s.serial, s.processed], 3, Number.MAX_SAFE_INTEGER) || !array(s.values, this.values.length, 3) || s.values[0] !== 0 || s.values[1] !== 1 ||
             !array(s.tokens, this.tokens.length, Number.MAX_SAFE_INTEGER) || !array(s.desired, this.desired.length, 4) || !Array.isArray(s.events) ||
-            s.events.length > this.maxEvents || !Array.isArray(s.trace) || s.trace.length > this.traceLimit) throw new Error('Invalid timed snapshot');
+            s.events.length > this.maxEvents || !Array.isArray(s.trace) || s.trace.length > this.traceLimit || !array(s.traceBase, this.values.length, 3) || s.traceBase[0] !== 0 || s.traceBase[1] !== 1 ||
+            !Number.isSafeInteger(s.traceBaseTime) || s.traceBaseTime < 0 || s.traceBaseTime > s.time) throw new Error('Invalid timed snapshot');
         const inputPins = new Set(Object.values(this.plan.inputs).flat()), flopPins = new Set(this.plan.flops.map(f => f.q)), ids = new Set();
         for (const e of s.events) {
             if (!Number.isSafeInteger(e.time) || e.time < s.time || !Number.isSafeInteger(e.id) || e.id < 1 || e.id > s.serial || ids.has(e.id)) throw new Error('Invalid event');
@@ -121,10 +123,10 @@ export class TimedSimulator {
                 e.gate === -1 && !inputPins.has(e.pin) && !flopPins.has(e.pin)) throw new Error('Invalid event driver');
             logicValue(e.value);
         }
-        let previous = -1;
+        let previous = s.traceBaseTime;
         for (const t of s.trace) {
             if (!Number.isSafeInteger(t.time) || t.time < previous || t.time > s.time || !Array.isArray(t.changes) || t.changes.length > this.values.length) throw new Error('Invalid trace');
-            for (const pair of t.changes) if (!Array.isArray(pair) || pair.length !== 2 || !array(pair, 2, this.values.length - 1) || pair[1] > 3) throw new Error('Invalid trace value');
+            for (const pair of t.changes) if (!Array.isArray(pair) || pair.length !== 2 || !array(pair, 2, this.values.length - 1) || pair[0] < 2 || pair[1] > 3) throw new Error('Invalid trace value');
             previous = t.time;
         }
         // Imported queues need not already be in heap order.
